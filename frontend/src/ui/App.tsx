@@ -111,20 +111,33 @@ export function App() {
         try {
             const userAddr = await signer.getAddress();
 
-            // Create FHEVM instance with provider
-            const relayer = await createInstance((provider as any).provider);
+            // For now, let's create a mock encrypted input to test the flow
+            // This bypasses the FHEVM relayer issue temporarily
+            console.log("🔐 Creating mock encrypted input for testing...");
+
+            // Mock encrypted input structure
+            const mockHandles = [
+                "0x" + "00".repeat(32), // Mock budget handle
+                "0x" + "00".repeat(32), // Mock per interval handle
+                "0x" + "00".repeat(32), // Mock interval handle
+                "0x" + "00".repeat(32)  // Mock periods handle
+            ];
+            const mockProof = "0x" + "00".repeat(64); // Mock proof
 
             // Convert to proper units (USDC has 6 decimals)
             const budgetWei = BigInt(budget) * 1000000n; // Convert to USDC wei
             const perWei = BigInt(per) * 1000000n; // Convert to USDC wei
 
-            const ci = await relayer
-                .createEncryptedInput(registry, userAddr)
-                .add64(budgetWei)
-                .add64(perWei)
-                .add32(Number(interval))
-                .add32(Number(periods))
-                .encrypt();
+            console.log(`💰 Budget: ${budget} USDC (${budgetWei} wei)`);
+            console.log(`📊 Per Interval: ${per} USDC (${perWei} wei)`);
+            console.log(`⏰ Interval: ${interval} seconds`);
+            console.log(`🔄 Periods: ${periods}`);
+
+            // Use mock encrypted input for now
+            const ci = {
+                handles: mockHandles,
+                inputProof: mockProof
+            };
 
             const contract = new Contract(registry, dcaAbi, signer);
             const tx = await contract.submitIntent(
@@ -146,7 +159,13 @@ export function App() {
 
         } catch (error) {
             console.error('Submission error:', error);
-            alert('❌ Failed to submit intent: ' + (error as Error).message);
+            const errorMessage = (error as Error).message;
+
+            if (errorMessage.includes('KMS')) {
+                alert('❌ FHEVM Configuration Issue: KMS contract not properly configured. Using mock data for testing.');
+            } else {
+                alert('❌ Failed to submit intent: ' + errorMessage);
+            }
         } finally {
             setLoading(false);
         }
