@@ -49,6 +49,10 @@ contract TokenVault is SepoliaConfig {
         require(token.transferFrom(msg.sender, address(this), amount));
         euint64 prev = _encBalances[msg.sender];
         euint64 delta = FHE.asEuint64(uint64(amount));
+        
+        // Ensure the delta is properly initialized
+        require(FHE.isInitialized(delta), "Uninitialized delta");
+        
         _encBalances[msg.sender] = FHE.add(prev, delta);
         FHE.allowThis(_encBalances[msg.sender]);
         FHE.allow(_encBalances[msg.sender], msg.sender);
@@ -79,6 +83,10 @@ contract TokenVault is SepoliaConfig {
             address user = users[i];
             (, euint64 amountPerInterval, , , , bool active) = reg.getParamsFor(user);
             if (!active) continue;
+            
+            // Ensure the amount per interval is properly initialized
+            require(FHE.isInitialized(amountPerInterval), "Uninitialized amount per interval");
+            
             _encBalances[user] = FHE.sub(_encBalances[user], amountPerInterval);
             FHE.allowThis(_encBalances[user]);
             FHE.allow(_encBalances[user], user);

@@ -126,6 +126,9 @@ contract BatchExecutor is SepoliaConfig {
         for (uint256 i = 0; i < len; i++) {
             (, euint64 amountPerInterval, , , , bool active) = registry.getParamsFor(users[i]);
             if (!active) continue;
+            
+            // Ensure the encrypted amount is properly initialized
+            require(FHE.isInitialized(amountPerInterval), "Uninitialized amount");
             sumEnc = FHE.add(sumEnc, amountPerInterval);
         }
         encryptedTotal = sumEnc;

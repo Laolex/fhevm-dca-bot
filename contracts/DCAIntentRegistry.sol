@@ -57,6 +57,12 @@ contract DCAIntentRegistry is SepoliaConfig {
         euint32 intervalSeconds = FHE.fromExternal(intervalSecondsExt, intervalSecondsProof);
         euint32 totalIntervals = FHE.fromExternal(totalIntervalsExt, totalIntervalsProof);
 
+        // Ensure all encrypted parameters are properly initialized
+        require(FHE.isInitialized(budget), "Uninitialized budget");
+        require(FHE.isInitialized(amountPerInterval), "Uninitialized amount per interval");
+        require(FHE.isInitialized(intervalSeconds), "Uninitialized interval seconds");
+        require(FHE.isInitialized(totalIntervals), "Uninitialized total intervals");
+
         // Initialize spent to 0
         euint64 spent = FHE.asEuint64(0);
 

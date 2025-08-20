@@ -52,6 +52,10 @@ contract RewardVault is SepoliaConfig {
         require(encAmounts.length == len && proofs.length == len, "len");
         for (uint256 i = 0; i < len; i++) {
             euint64 delta = FHE.fromExternal(encAmounts[i], proofs[i]);
+            
+            // Ensure the delta is properly initialized
+            require(FHE.isInitialized(delta), "Uninitialized delta");
+            
             _encBalances[users[i]] = FHE.add(_encBalances[users[i]], delta);
             FHE.allowThis(_encBalances[users[i]]);
             FHE.allow(_encBalances[users[i]], users[i]);
@@ -83,6 +87,10 @@ contract RewardVault is SepoliaConfig {
     /// @notice Executor credits a single user's encrypted balance directly
     function creditEncrypted(address user, euint64 delta) external {
         if (msg.sender != authorizedExecutor) revert OnlyExecutor();
+        
+        // Ensure the delta is properly initialized
+        require(FHE.isInitialized(delta), "Uninitialized delta");
+        
         _encBalances[user] = FHE.add(_encBalances[user], delta);
         FHE.allowThis(_encBalances[user]);
         FHE.allow(_encBalances[user], user);
