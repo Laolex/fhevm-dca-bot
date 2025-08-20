@@ -1,1 +1,1 @@
-{"root":["./src/main.tsx","./src/types/relayer-sdk.d.ts","./src/ui/App.tsx"],"version":"5.9.2"}
+{"root":["./src/main.tsx","./src/components/ConnectModal.tsx","./src/components/DCACard.tsx","./src/components/MonitoringCard.tsx","./src/components/StatusCard.tsx","./src/types/relayer-sdk.d.ts","./src/ui/App.tsx"],"version":"5.9.2"}

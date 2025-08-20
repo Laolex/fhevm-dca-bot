@@ -31,7 +31,7 @@ export function MonitoringCard({
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Monitor & Track</h2>
             </div>
-            
+
             <div className="space-y-8">
                 {/* Batch Status Section */}
                 <div>
@@ -41,21 +41,21 @@ export function MonitoringCard({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 BatchExecutor Address
                             </label>
-                            <input 
-                                value={executorAddr} 
-                                onChange={e => setExecutorAddr(e.target.value)} 
-                                placeholder="0x..." 
+                            <input
+                                value={executorAddr}
+                                onChange={e => setExecutorAddr(e.target.value)}
+                                placeholder="0x..."
                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                             />
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={onLoadBatchStatus}
                             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                         >
                             🔄 Load Recent Batch Events
                         </button>
-                        
+
                         <div className="max-h-64 overflow-y-auto space-y-3">
                             {batchEvents.length > 0 ? (
                                 batchEvents.map((e, i) => (
@@ -93,21 +93,21 @@ export function MonitoringCard({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 RewardVault Address
                             </label>
-                            <input 
-                                value={rewardVaultAddr} 
-                                onChange={e => setRewardVaultAddr(e.target.value)} 
-                                placeholder="0x..." 
+                            <input
+                                value={rewardVaultAddr}
+                                onChange={e => setRewardVaultAddr(e.target.value)}
+                                placeholder="0x..."
                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                             />
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={onLoadBalance}
                             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                         >
                             🔍 Load Encrypted Balance
                         </button>
-                        
+
                         {encBalance && (
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                                 <p className="text-sm font-semibold text-gray-700 mb-3">Encrypted WETH Balance:</p>

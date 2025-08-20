@@ -51,18 +51,18 @@ export function App() {
                 alert('Please install MetaMask to use this application');
                 return;
             }
-            
+
             await injected.request?.({ method: 'eth_requestAccounts' });
             const prov = new BrowserProvider(injected);
             setProvider(prov);
             const s = await prov.getSigner();
             setSigner(s);
             setAccount(await s.getAddress());
-            
+
             // Check network
             const network = await prov.getNetwork();
             setNetwork(network.name);
-            
+
             if (network.chainId !== 11155111n) { // Sepolia
                 alert('Please switch to Sepolia testnet for this application');
             }
@@ -72,25 +72,25 @@ export function App() {
         }
     }, []);
 
-    const canSubmit = useMemo(() => 
-        signer && isAddress(registry) && budget && per && interval && periods && !loading, 
+    const canSubmit = useMemo(() =>
+        Boolean(signer && isAddress(registry) && budget && per && interval && periods && !loading),
         [signer, registry, budget, per, interval, periods, loading]
     );
 
     const submit = useCallback(async () => {
         if (!signer || !provider || !isAddress(registry)) return;
-        
+
         setLoading(true);
         setTxHash('');
-        
+
         try {
             const userAddr = await signer.getAddress();
             const relayer = await createInstance((provider as any).provider);
-            
+
             // Convert to proper units (USDC has 6 decimals)
             const budgetWei = BigInt(budget) * 1000000n; // Convert to USDC wei
             const perWei = BigInt(per) * 1000000n; // Convert to USDC wei
-            
+
             const ci = await relayer
                 .createEncryptedInput(registry, userAddr)
                 .add64(budgetWei)
@@ -98,7 +98,7 @@ export function App() {
                 .add32(Number(interval))
                 .add32(Number(periods))
                 .encrypt();
-            
+
             const contract = new Contract(registry, dcaAbi, signer);
             const tx = await contract.submitIntent(
                 ci.handles[0], ci.inputProof,
@@ -106,17 +106,17 @@ export function App() {
                 ci.handles[2], ci.inputProof,
                 ci.handles[3], ci.inputProof
             );
-            
+
             setTxHash(tx.hash);
             await tx.wait();
             alert('✅ DCA Intent submitted successfully!');
-            
+
             // Clear form
             setBudget('1000');
             setPer('100');
             setInterval('86400');
             setPeriods('10');
-            
+
         } catch (error) {
             console.error('Submission error:', error);
             alert('❌ Failed to submit intent: ' + (error as Error).message);
@@ -127,7 +127,7 @@ export function App() {
 
     const loadBatchStatus = useCallback(async () => {
         if (!provider || !isAddress(executorAddr)) return;
-        
+
         try {
             const fromBlock = (await provider.getBlockNumber()) - 2000;
             const iface = new (require('ethers').Interface)([
@@ -135,33 +135,33 @@ export function App() {
                 'event BatchDecryptionFulfilled(uint256 indexed batchId, uint64 decryptedTotal)',
                 'event BatchFinalized(uint256 indexed batchId, uint256 amountOut)'
             ]);
-            
+
             const logs = await provider.getLogs({ address: executorAddr, fromBlock });
             const parsed: Array<{ name: string; batchId: string; data?: any; timestamp: number }> = [];
-            
+
             for (const log of logs) {
                 try {
                     const p = iface.parseLog(log as any);
                     const block = await provider.getBlock(log.blockNumber);
-                    
+
                     if (p?.name === 'BatchPrepared') {
-                        parsed.push({ 
-                            name: 'BatchPrepared', 
-                            batchId: (p.args[0] as bigint).toString(), 
+                        parsed.push({
+                            name: 'BatchPrepared',
+                            batchId: (p.args[0] as bigint).toString(),
                             data: { userCount: (p.args[1] as bigint).toString() },
                             timestamp: block?.timestamp || 0
                         });
                     } else if (p?.name === 'BatchDecryptionFulfilled') {
-                        parsed.push({ 
-                            name: 'BatchDecryptionFulfilled', 
-                            batchId: (p.args[0] as bigint).toString(), 
+                        parsed.push({
+                            name: 'BatchDecryptionFulfilled',
+                            batchId: (p.args[0] as bigint).toString(),
                             data: { total: (p.args[1] as bigint).toString() },
                             timestamp: block?.timestamp || 0
                         });
                     } else if (p?.name === 'BatchFinalized') {
-                        parsed.push({ 
-                            name: 'BatchFinalized', 
-                            batchId: (p.args[0] as bigint).toString(), 
+                        parsed.push({
+                            name: 'BatchFinalized',
+                            batchId: (p.args[0] as bigint).toString(),
                             data: { amountOut: (p.args[1] as bigint).toString() },
                             timestamp: block?.timestamp || 0
                         });
@@ -170,7 +170,7 @@ export function App() {
                     // ignore parsing errors
                 }
             }
-            
+
             // Sort by timestamp (newest first)
             parsed.sort((a, b) => b.timestamp - a.timestamp);
             setBatchEvents(parsed);
@@ -182,7 +182,7 @@ export function App() {
 
     const loadMyEncBalance = useCallback(async () => {
         if (!signer || !isAddress(rewardVaultAddr)) return;
-        
+
         try {
             const rv = new Contract(rewardVaultAddr, ['function getMyEncryptedBalance() view returns (bytes)'], signer);
             const h = await rv.getMyEncryptedBalance();
@@ -210,7 +210,7 @@ export function App() {
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                            <button 
+                            <button
                                 onClick={() => setShowConnectModal(true)}
                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
