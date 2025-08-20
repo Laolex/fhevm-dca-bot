@@ -88,6 +88,8 @@ npm run dev
 ```
 Visit `http://localhost:5173` and connect your wallet to submit encrypted DCA intents.
 
+**Note:** Currently using mock encryption for UI testing. Real FHEVM encryption will be implemented once KMS configuration is resolved. See [FHEVM_SETUP.md](./FHEVM_SETUP.md) for details.
+
 ### 4. Execute Batch (CLI)
 ```bash
 # Execute a batch of users
