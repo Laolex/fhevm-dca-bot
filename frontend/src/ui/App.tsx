@@ -30,7 +30,11 @@ const FHEVM_CONFIG = {
 
 const dcaAbi = [
     'function submitIntent(externalEuint64 budgetExt, bytes calldata budgetProof, externalEuint64 amountPerIntervalExt, bytes calldata amountPerIntervalProof, externalEuint32 intervalSecondsExt, bytes calldata intervalSecondsProof, externalEuint32 totalIntervalsExt, bytes calldata totalIntervalsProof) external',
-    'function getMyParams() view returns (bytes budget, bytes per, bytes interval, bytes periods, bytes spent, bool active)'
+    'function getMyParams() view returns (bytes budget, bytes per, bytes interval, bytes periods, bytes spent, bool active)',
+    'function setAuthorizedExecutor(address executor) external',
+    'function grantExecutorOnUsers(address[] calldata users) external',
+    'function deactivateIntent() external',
+    'function getParamsFor(address user) view returns (euint64 budget, euint64 amountPerInterval, euint32 intervalSeconds, euint32 totalIntervals, euint64 spent, bool active)'
 ];
 
 export function App() {
@@ -139,7 +143,21 @@ export function App() {
                 inputProof: mockProof
             };
 
+            console.log("📋 Contract Details:");
+            console.log(`📍 Registry Address: ${registry}`);
+            console.log(`🔗 ABI Functions:`, dcaAbi);
+
             const contract = new Contract(registry, dcaAbi, signer);
+            console.log("✅ Contract instantiated");
+            console.log("🔍 Contract object:", contract);
+
+            // Check if contract is deployed
+            const code = await provider.getCode(registry);
+            console.log("📦 Contract code length:", code.length);
+            if (code === "0x") {
+                throw new Error("Contract not deployed at this address");
+            }
+
             const tx = await contract.submitIntent(
                 ci.handles[0], ci.inputProof,
                 ci.handles[1], ci.inputProof,
