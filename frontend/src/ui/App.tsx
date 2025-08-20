@@ -28,13 +28,13 @@ const FHEVM_CONFIG = {
     relayerUrl: 'https://relayer.testnet.zama.cloud'
 };
 
+// Simplified ABI for basic interaction (without FHEVM types)
 const dcaAbi = [
-    'function submitIntent(externalEuint64 budgetExt, bytes calldata budgetProof, externalEuint64 amountPerIntervalExt, bytes calldata amountPerIntervalProof, externalEuint32 intervalSecondsExt, bytes calldata intervalSecondsProof, externalEuint32 totalIntervalsExt, bytes calldata totalIntervalsProof) external',
+    'function submitIntent(bytes calldata budgetExt, bytes calldata budgetProof, bytes calldata amountPerIntervalExt, bytes calldata amountPerIntervalProof, bytes calldata intervalSecondsExt, bytes calldata intervalSecondsProof, bytes calldata totalIntervalsExt, bytes calldata totalIntervalsProof) external',
     'function getMyParams() view returns (bytes budget, bytes per, bytes interval, bytes periods, bytes spent, bool active)',
     'function setAuthorizedExecutor(address executor) external',
     'function grantExecutorOnUsers(address[] calldata users) external',
-    'function deactivateIntent() external',
-    'function getParamsFor(address user) view returns (euint64 budget, euint64 amountPerInterval, euint32 intervalSeconds, euint32 totalIntervals, euint64 spent, bool active)'
+    'function deactivateIntent() external'
 ];
 
 export function App() {
