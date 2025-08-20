@@ -15,6 +15,19 @@ const SEPOLIA_ADDRESSES = {
     automationForwarder: '0x118b16Ad4205a97bC6F9e116D12fbA286A3eD29B'
 };
 
+// FHEVM Configuration (Official Zama Sepolia addresses)
+const FHEVM_CONFIG = {
+    executor: '0x848B0066793BcC60346Da1F49049357399B8D595',
+    acl: '0x687820221192C5B662b25367F70076A37bc79b6c',
+    hcuLimit: '0x594BB474275918AF9609814E68C61B1587c5F838',
+    kmsVerifier: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
+    inputVerifier: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',
+    decryptionOracle: '0xa02Cda4Ca3a71D7C46997716F4283aa851C28812',
+    decryptionAddress: '0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1',
+    inputVerificationAddress: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
+    relayerUrl: 'https://relayer.testnet.zama.cloud'
+};
+
 const dcaAbi = [
     'function submitIntent(externalEuint64 budgetExt, bytes calldata budgetProof, externalEuint64 amountPerIntervalExt, bytes calldata amountPerIntervalProof, externalEuint32 intervalSecondsExt, bytes calldata intervalSecondsProof, externalEuint32 totalIntervalsExt, bytes calldata totalIntervalsProof) external',
     'function getMyParams() view returns (bytes budget, bytes per, bytes interval, bytes periods, bytes spent, bool active)'
@@ -38,8 +51,20 @@ export function App() {
     const [network, setNetwork] = useState<string>('');
     const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
 
-    // Auto-connect on load
+    // Configure FHEVM and auto-connect on load
     useEffect(() => {
+        // Configure FHEVM for Sepolia
+        const configureFHEVM = () => {
+            const anyWindow = window as any;
+            anyWindow.FHEVM_CONFIG = {
+                chainId: 11155111,
+                publicKey: FHEVM_CONFIG.executor,
+                verifier: FHEVM_CONFIG.kmsVerifier,
+                relayerUrl: FHEVM_CONFIG.relayerUrl
+            };
+        };
+
+        configureFHEVM();
         connect();
     }, []);
 
@@ -85,6 +110,8 @@ export function App() {
 
         try {
             const userAddr = await signer.getAddress();
+
+            // Create FHEVM instance with provider
             const relayer = await createInstance((provider as any).provider);
 
             // Convert to proper units (USDC has 6 decimals)
