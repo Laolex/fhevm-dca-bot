@@ -1,6 +1,9 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { BrowserProvider, Contract, Eip1193Provider, JsonRpcSigner, isAddress } from 'ethers';
 import { createInstance } from 'fhevmjs';
+import { ConnectModal } from '../components/ConnectModal';
+import { DCACard } from '../components/DCACard';
+import { MonitoringCard } from '../components/MonitoringCard';
 
 // Sepolia contract addresses
 const SEPOLIA_ADDRESSES = {
@@ -33,7 +36,7 @@ export function App() {
     const [loading, setLoading] = useState<boolean>(false);
     const [txHash, setTxHash] = useState<string>('');
     const [network, setNetwork] = useState<string>('');
-    const [activeTab, setActiveTab] = useState<'submit' | 'status' | 'balance'>('submit');
+    const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
 
     // Auto-connect on load
     useEffect(() => {
@@ -191,7 +194,6 @@ export function App() {
     }, [signer, rewardVaultAddr]);
 
     const formatAddress = (addr: string) => `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-    const formatDate = (timestamp: number) => new Date(timestamp * 1000).toLocaleString();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -209,7 +211,7 @@ export function App() {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                             <button 
-                                onClick={connect}
+                                onClick={() => setShowConnectModal(true)}
                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 {account ? `Connected: ${formatAddress(account)}` : 'Connect Wallet'}
@@ -224,233 +226,38 @@ export function App() {
                     </div>
                 </div>
 
-                {/* Navigation Tabs */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-2 mb-8 border border-white/20">
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => setActiveTab('submit')}
-                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 ${
-                                activeTab === 'submit'
-                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                            }`}
-                        >
-                            📊 Submit DCA Intent
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('status')}
-                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 ${
-                                activeTab === 'status'
-                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                            }`}
-                        >
-                            📈 Batch Status
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('balance')}
-                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 ${
-                                activeTab === 'balance'
-                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                            }`}
-                        >
-                            💰 My Balance
-                        </button>
-                    </div>
+                {/* Main Content - Two Cards */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* DCA Submission Card */}
+                    <DCACard
+                        registry={registry}
+                        setRegistry={setRegistry}
+                        budget={budget}
+                        setBudget={setBudget}
+                        per={per}
+                        setPer={setPer}
+                        interval={interval}
+                        setInterval={setInterval}
+                        periods={periods}
+                        setPeriods={setPeriods}
+                        onSubmit={submit}
+                        canSubmit={canSubmit}
+                        loading={loading}
+                        txHash={txHash}
+                    />
+
+                    {/* Monitoring Card */}
+                    <MonitoringCard
+                        executorAddr={executorAddr}
+                        setExecutorAddr={setExecutorAddr}
+                        rewardVaultAddr={rewardVaultAddr}
+                        setRewardVaultAddr={setRewardVaultAddr}
+                        batchEvents={batchEvents}
+                        encBalance={encBalance}
+                        onLoadBatchStatus={loadBatchStatus}
+                        onLoadBalance={loadMyEncBalance}
+                    />
                 </div>
-
-                {/* Content */}
-                {activeTab === 'submit' && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Submit DCA Intent</h2>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Registry Address
-                                </label>
-                                <input 
-                                    value={registry} 
-                                    onChange={e => setRegistry(e.target.value)} 
-                                    placeholder="0x..." 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Total Budget (USDC)
-                                    </label>
-                                    <input 
-                                        value={budget} 
-                                        onChange={e => setBudget(e.target.value)} 
-                                        placeholder="1000"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Amount Per Interval (USDC)
-                                    </label>
-                                    <input 
-                                        value={per} 
-                                        onChange={e => setPer(e.target.value)} 
-                                        placeholder="100"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Interval (seconds)
-                                    </label>
-                                    <input 
-                                        value={interval} 
-                                        onChange={e => setInterval(e.target.value)} 
-                                        placeholder="86400"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">86400 = Daily, 3600 = Hourly</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Total Periods
-                                    </label>
-                                    <input 
-                                        value={periods} 
-                                        onChange={e => setPeriods(e.target.value)} 
-                                        placeholder="10"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                    />
-                                </div>
-                            </div>
-                            
-                            <button 
-                                disabled={!canSubmit} 
-                                onClick={submit}
-                                className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 ${
-                                    canSubmit 
-                                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105' 
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
-                            >
-                                {loading ? '⏳ Encrypting & Submitting...' : '🔐 Encrypt & Submit Intent'}
-                            </button>
-                            
-                            {txHash && (
-                                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                            <span className="text-green-600 text-lg">✅</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-green-800 font-medium">Transaction submitted successfully!</p>
-                                            <a 
-                                                href={`https://sepolia.etherscan.io/tx/${txHash}`} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="text-blue-600 hover:underline text-sm"
-                                            >
-                                                View on Etherscan →
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'status' && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">📈 Batch Status</h2>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    BatchExecutor Address
-                                </label>
-                                <input 
-                                    value={executorAddr} 
-                                    onChange={e => setExecutorAddr(e.target.value)} 
-                                    placeholder="0x..." 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
-                            </div>
-                            
-                            <button 
-                                onClick={loadBatchStatus}
-                                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                🔄 Load Recent Batch Events
-                            </button>
-                            
-                            <div className="max-h-96 overflow-y-auto space-y-3">
-                                {batchEvents.length > 0 ? (
-                                    batchEvents.map((e, i) => (
-                                        <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <span className="font-semibold text-gray-900">{e.name}</span>
-                                                    <span className="text-gray-600 ml-2">#{e.batchId}</span>
-                                                </div>
-                                                <span className="text-xs text-gray-500">{formatDate(e.timestamp)}</span>
-                                            </div>
-                                            {e.data && (
-                                                <p className="text-sm text-gray-600 mt-2">
-                                                    {Object.entries(e.data).map(([key, value]) => `${key}: ${value}`).join(', ')}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <div className="text-gray-400 text-6xl mb-4">📊</div>
-                                        <p className="text-gray-500">No batch events found</p>
-                                        <p className="text-gray-400 text-sm mt-2">Click "Load Recent Batch Events" to fetch data</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'balance' && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">💰 My Encrypted Balance</h2>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    RewardVault Address
-                                </label>
-                                <input 
-                                    value={rewardVaultAddr} 
-                                    onChange={e => setRewardVaultAddr(e.target.value)} 
-                                    placeholder="0x..." 
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
-                            </div>
-                            
-                            <button 
-                                onClick={loadMyEncBalance}
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                🔍 Load Encrypted Balance
-                            </button>
-                            
-                            {encBalance && (
-                                <div className="p-6 bg-gray-50 rounded-xl border border-gray-200">
-                                    <p className="text-sm font-semibold text-gray-700 mb-3">Encrypted WETH Balance:</p>
-                                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto">
-                                        {encBalance}
-                                    </pre>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Info Section */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 mt-8 border border-blue-200/50">
@@ -480,6 +287,15 @@ export function App() {
                     </div>
                 </div>
             </div>
+
+            {/* Connect Modal */}
+            <ConnectModal
+                isOpen={showConnectModal}
+                onClose={() => setShowConnectModal(false)}
+                onConnect={connect}
+                account={account}
+                network={network}
+            />
         </div>
     );
 }
