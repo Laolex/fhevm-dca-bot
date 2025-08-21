@@ -22,7 +22,7 @@ Our contracts use `SepoliaConfig` which automatically handles all FHEVM configur
 
 | Contract             | Address                                      |
 | -------------------- | -------------------------------------------- |
-| DCAIntentRegistry    | `0x220f3B089026EE38Ee45540f1862d5bcA441B877` |
+| DCAIntentRegistry    | `0x3F9D1D64CbbD69aBcB79faBD156817655b48050c` |
 | BatchExecutor        | `0x7dc70ce7f2a6Ad3895Ce84c7cd0CeC3Eec4b8C70` |
 | TokenVault           | `0x8D91b58336bc43222D55bC2C5aB3DEF468A54050` |
 | RewardVault          | `0x98Eec4C5bA3DF65be22106E0E5E872454e8834db` |
@@ -43,10 +43,14 @@ Our contracts use `SepoliaConfig` which automatically handles all FHEVM configur
 ### 1. **Frontend (Ready to Use)**
 ```bash
 # Frontend is already running at:
-http://localhost:5174/
+http://localhost:5173/
 
 # All contract addresses are pre-filled
 # Just connect your wallet and start using!
+
+# ✅ WORKING: DCA intent submission with test function
+# The frontend now successfully submits DCA intents to the contract
+# Uses submitTestIntent function for testing (plain values, not encrypted)
 ```
 
 ### 2. **Environment Setup (Optional)**
