@@ -32,6 +32,7 @@ contract DCAIntentRegistry is SepoliaConfig {
     event IntentSubmitted(address indexed user);
     event IntentUpdated(address indexed user);
     event IntentDeactivated(address indexed user);
+    event TestIntentSubmitted(address indexed user, uint64 budget, uint64 perInterval, uint32 interval, uint32 periods);
 
     error NoIntent();
     error OnlyOwner();
@@ -98,6 +99,56 @@ contract DCAIntentRegistry is SepoliaConfig {
         _hasParams[msg.sender] = true;
 
         emit IntentSubmitted(msg.sender);
+    }
+
+    /// @notice Test function for submitting DCA intent with plain values (for testing only)
+    function submitTestIntent(
+        uint64 budget,
+        uint64 amountPerInterval,
+        uint32 intervalSeconds,
+        uint32 totalIntervals
+    ) external {
+        // Convert plain values to encrypted values
+        euint64 budgetEnc = FHE.asEuint64(budget);
+        euint64 amountPerIntervalEnc = FHE.asEuint64(amountPerInterval);
+        euint32 intervalSecondsEnc = FHE.asEuint32(intervalSeconds);
+        euint32 totalIntervalsEnc = FHE.asEuint32(totalIntervals);
+        euint64 spent = FHE.asEuint64(0);
+
+        // Allow contract and user to decrypt their own values
+        FHE.allowThis(budgetEnc);
+        FHE.allowThis(amountPerIntervalEnc);
+        FHE.allowThis(intervalSecondsEnc);
+        FHE.allowThis(totalIntervalsEnc);
+        FHE.allowThis(spent);
+
+        FHE.allow(budgetEnc, msg.sender);
+        FHE.allow(amountPerIntervalEnc, msg.sender);
+        FHE.allow(intervalSecondsEnc, msg.sender);
+        FHE.allow(totalIntervalsEnc, msg.sender);
+        FHE.allow(spent, msg.sender);
+
+        // Also allow current authorized executor if set
+        if (_authorizedExecutor != address(0)) {
+            FHE.allow(budgetEnc, _authorizedExecutor);
+            FHE.allow(amountPerIntervalEnc, _authorizedExecutor);
+            FHE.allow(intervalSecondsEnc, _authorizedExecutor);
+            FHE.allow(totalIntervalsEnc, _authorizedExecutor);
+            FHE.allow(spent, _authorizedExecutor);
+        }
+
+        _paramsByUser[msg.sender] = EncryptedDCAParams({
+            budget: budgetEnc,
+            amountPerInterval: amountPerIntervalEnc,
+            intervalSeconds: intervalSecondsEnc,
+            totalIntervals: totalIntervalsEnc,
+            spent: spent,
+            active: true
+        });
+        _hasParams[msg.sender] = true;
+
+        emit IntentSubmitted(msg.sender);
+        emit TestIntentSubmitted(msg.sender, budget, amountPerInterval, intervalSeconds, totalIntervals);
     }
 
     /// @notice Update an existing intent's encrypted parameters (partial updates allowed via optional flags)

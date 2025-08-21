@@ -6,7 +6,7 @@ async function main() {
     try {
         const [deployer] = await ethers.getSigners();
         const provider = deployer.provider;
-        
+
         if (!provider) {
             throw new Error("No provider available");
         }
@@ -17,7 +17,7 @@ async function main() {
 
         // Contract addresses
         const registryAddress = "0x220f3B089026EE38Ee45540f1862d5bcA441B877";
-        
+
         // Contract ABI (simplified for ethers.js compatibility)
         const dcaAbi = [
             'function submitIntent(bytes calldata budgetExt, bytes calldata budgetProof, bytes calldata amountPerIntervalExt, bytes calldata amountPerIntervalProof, bytes calldata intervalSecondsExt, bytes calldata intervalSecondsProof, bytes calldata totalIntervalsExt, bytes calldata totalIntervalsProof) external',
@@ -35,7 +35,7 @@ async function main() {
         console.log("\n🔍 Checking contract deployment...");
         const code = await provider.getCode(registryAddress);
         console.log(`📦 Contract code length: ${code.length}`);
-        
+
         if (code === "0x") {
             throw new Error("Contract not deployed at this address");
         }
@@ -62,7 +62,7 @@ async function main() {
         } catch (error) {
             console.log("⚠️ Could not check functions directly:", (error as Error).message);
             console.log("🔍 Trying alternative approach...");
-            
+
             // Try to check if submitIntent exists by trying to call it
             if (typeof contract.submitIntent === 'function') {
                 console.log("✅ submitIntent function found in contract");
@@ -90,12 +90,12 @@ async function main() {
     } catch (error) {
         console.error("❌ Contract Interaction Test FAILED:");
         console.error(error);
-        
+
         console.log("\n🔧 Troubleshooting:");
         console.log("1. Check if contract is deployed at the correct address");
         console.log("2. Verify ABI matches the deployed contract");
         console.log("3. Ensure network connection is working");
-        
+
         process.exit(1);
     }
 }

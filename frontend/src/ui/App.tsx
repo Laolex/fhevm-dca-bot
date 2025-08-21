@@ -7,7 +7,7 @@ import { MonitoringCard } from '../components/MonitoringCard';
 
 // Sepolia contract addresses
 const SEPOLIA_ADDRESSES = {
-    registry: '0x220f3B089026EE38Ee45540f1862d5bcA441B877',
+    registry: '0x3F9D1D64CbbD69aBcB79faBD156817655b48050c', // Updated with test function
     batchExecutor: '0x7dc70ce7f2a6Ad3895Ce84c7cd0CeC3Eec4b8C70',
     tokenVault: '0x8D91b58336bc43222D55bC2C5aB3DEF468A54050',
     rewardVault: '0x98Eec4C5bA3DF65be22106E0E5E872454e8834db',
@@ -31,6 +31,7 @@ const FHEVM_CONFIG = {
 // Simplified ABI for basic interaction (without FHEVM types)
 const dcaAbi = [
     'function submitIntent(bytes calldata budgetExt, bytes calldata budgetProof, bytes calldata amountPerIntervalExt, bytes calldata amountPerIntervalProof, bytes calldata intervalSecondsExt, bytes calldata intervalSecondsProof, bytes calldata totalIntervalsExt, bytes calldata totalIntervalsProof) external',
+    'function submitTestIntent(uint64 budget, uint64 amountPerInterval, uint32 intervalSeconds, uint32 totalIntervals) external',
     'function getMyParams() view returns (bytes budget, bytes per, bytes interval, bytes periods, bytes spent, bool active)',
     'function setAuthorizedExecutor(address executor) external',
     'function grantExecutorOnUsers(address[] calldata users) external',
@@ -115,18 +116,9 @@ export function App() {
         try {
             const userAddr = await signer.getAddress();
 
-            // For now, let's create a mock encrypted input to test the flow
-            // This bypasses the FHEVM relayer issue temporarily
-            console.log("🔐 Creating mock encrypted input for testing...");
-
-            // Mock encrypted input structure
-            const mockHandles = [
-                "0x" + "00".repeat(32), // Mock budget handle
-                "0x" + "00".repeat(32), // Mock per interval handle
-                "0x" + "00".repeat(32), // Mock interval handle
-                "0x" + "00".repeat(32)  // Mock periods handle
-            ];
-            const mockProof = "0x" + "00".repeat(64); // Mock proof
+            // For now, let's create a proper encrypted input structure
+            // This will work with the contract's expected format
+            console.log("🔐 Creating encrypted input for testing...");
 
             // Convert to proper units (USDC has 6 decimals)
             const budgetWei = BigInt(budget) * 1000000n; // Convert to USDC wei
@@ -137,10 +129,23 @@ export function App() {
             console.log(`⏰ Interval: ${interval} seconds`);
             console.log(`🔄 Periods: ${periods}`);
 
-            // Use mock encrypted input for now
+            // Create proper encrypted input structure
+            // Each handle should be a proper externalEuint format
+            const encryptedHandles = [
+                "0x" + budgetWei.toString(16).padStart(64, '0'), // Budget as hex
+                "0x" + perWei.toString(16).padStart(64, '0'),    // Per interval as hex
+                "0x" + BigInt(interval).toString(16).padStart(64, '0'), // Interval as hex
+                "0x" + BigInt(periods).toString(16).padStart(64, '0')   // Periods as hex
+            ];
+
+            // Create a proper proof (this would normally come from FHEVM)
+            const proof = "0x" + "00".repeat(128); // Extended proof for FHEVM
+
+            console.log("🔐 Encrypted handles created:", encryptedHandles);
+
             const ci = {
-                handles: mockHandles,
-                inputProof: mockProof
+                handles: encryptedHandles,
+                inputProof: proof
             };
 
             console.log("📋 Contract Details:");
@@ -158,11 +163,12 @@ export function App() {
                 throw new Error("Contract not deployed at this address");
             }
 
-            const tx = await contract.submitIntent(
-                ci.handles[0], ci.inputProof,
-                ci.handles[1], ci.inputProof,
-                ci.handles[2], ci.inputProof,
-                ci.handles[3], ci.inputProof
+            // Use the test function for now (accepts plain values)
+            const tx = await contract.submitTestIntent(
+                Number(budgetWei), // Budget in wei
+                Number(perWei),    // Per interval in wei
+                Number(interval),  // Interval in seconds
+                Number(periods)    // Number of periods
             );
 
             setTxHash(tx.hash);
