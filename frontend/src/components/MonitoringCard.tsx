@@ -24,14 +24,7 @@ export function MonitoringCard({
     const formatDate = (timestamp: number) => new Date(timestamp * 1000).toLocaleString();
 
     return (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 text-lg">📈</span>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900">Monitor & Track</h2>
-            </div>
-
+        <div className="w-full">
             <div className="space-y-8">
                 {/* Batch Status Section */}
                 <div>

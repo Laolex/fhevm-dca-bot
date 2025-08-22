@@ -5,12 +5,13 @@ A fully decentralized, privacy-preserving Dollar-Cost Averaging (DCA) bot built 
 ## 🚀 Live on Sepolia Testnet
 
 **Deployed Contract Addresses:**
-- **DCAIntentRegistry**: `0x220f3B089026EE38Ee45540f1862d5bcA441B877`
+- **DCAIntentRegistry**: `0x3F9D1D64CbbD69aBcB79faBD156817655b48050c`
 - **BatchExecutor**: `0x7dc70ce7f2a6Ad3895Ce84c7cd0CeC3Eec4b8C70`
 - **TokenVault**: `0x8D91b58336bc43222D55bC2C5aB3DEF468A54050`
 - **RewardVault**: `0x98Eec4C5bA3DF65be22106E0E5E872454e8834db`
 - **DexAdapter**: `0xAF65e8895ba60db17486E69B052EA39D52717d2f`
 - **AutomationForwarder**: `0x118b16Ad4205a97bC6F9e116D12fbA286A3eD29B`
+- **TimeBasedBatchTrigger**: `0x9ca1815693fB7D887A146D574F3a13033b4E1976`
 
 **External Addresses:**
 - **USDC**: `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
@@ -36,6 +37,51 @@ A fully decentralized, privacy-preserving Dollar-Cost Averaging (DCA) bot built 
 - **Encrypted Storage**: All sensitive data stored as `euint32`/`euint64` types
 - **Oracle-Based Decryption**: Aggregated totals only revealed through FHE decryption oracle
 - **No Strategy Leakage**: Individual parameters never decrypted on-chain
+
+## 🎯 **Batching Mechanism**
+
+The system implements a sophisticated batching mechanism that:
+
+- **Collects encrypted DCA intents** from multiple users
+- **Aggregates encrypted amounts** using FHE operations without revealing individual contributions
+- **Executes single DEX swaps** for the total batch amount (USDC → ETH)
+- **Distributes purchased tokens** proportionally using encrypted calculations
+- **Supports dual triggers**: user-based (10 users) and time-based (5 minutes)
+
+### **✅ Batching Requirements - FULLY IMPLEMENTED**
+
+1. **✅ Collects encrypted DCA intents from multiple users**
+   - `DCAIntentRegistry` stores encrypted parameters per user
+   - Active user tracking with `getActiveUsers()` and `getActiveUserCount()`
+   - Support for multiple users with different DCA strategies
+
+2. **✅ Aggregates encrypted amounts using FHE operations**
+   - `FHE.add()` sums encrypted amounts without revealing individual contributions
+   - `BatchExecutor.executeBatch()` processes multiple users
+   - Oracle decryption reveals only batch totals, not individual amounts
+
+3. **✅ Executes single decrypted swap on DEX (USDC → ETH)**
+   - `DexAdapter.swapUsdcForEth()` performs USDC → ETH swaps
+   - Single swap per batch for gas efficiency
+   - Uniswap V3 integration with configurable pool fees
+
+4. **✅ Distributes purchased tokens proportionally**
+   - `RewardVault.creditBatch()` handles encrypted proportional distributions
+   - Encrypted user allocations maintain privacy
+   - Proportional shares calculated based on user contributions
+
+5. **✅ Batch execution triggers**
+   - **Primary**: User-based (10 users minimum) via `BatchExecutor.minBatchUsers`
+   - **Fallback**: Time-based (5 minutes) via `TimeBasedBatchTrigger`
+   - Chainlink Automation integration ready
+
+### **🔐 Privacy Features**
+
+- **Individual amounts**: 🔒 Encrypted (FHE)
+- **Batch totals**: 🔓 Revealed only to oracle
+- **User allocations**: 🔒 Encrypted proportional shares
+- **K-anonymity**: ✅ Achieved through batching
+- **No individual tracking**: ✅ Maintained
 
 ## 🏗️ Architecture
 

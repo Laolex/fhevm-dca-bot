@@ -4,6 +4,16 @@ pragma solidity ^0.8.24;
 import {FHE, euint32, euint64, externalEuint32, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
 import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
+interface IERC20 {
+    function balanceOf(address owner) external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+}
+
+interface TokenVault {
+    function deposit(uint256 amount) external;
+}
+
 /// @title DCAIntentRegistry
 /// @notice Stores users' DCA strategy parameters as encrypted values on-chain
 /// @dev Parameters remain encrypted; only aggregate usage should be revealed by other contracts
@@ -25,6 +35,8 @@ contract DCAIntentRegistry is SepoliaConfig {
 
     mapping(address => EncryptedDCAParams) private _paramsByUser;
     mapping(address => bool) private _hasParams;
+    address[] private _activeUsers;
+    mapping(address => uint256) private _userIndex; // For efficient removal
 
     address private _owner;
     address private _authorizedExecutor;
@@ -108,6 +120,15 @@ contract DCAIntentRegistry is SepoliaConfig {
         uint32 intervalSeconds,
         uint32 totalIntervals
     ) external {
+        // Check if user has sufficient USDC balance in the vault
+        IERC20 usdc = IERC20(0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238); // Sepolia USDC
+        uint256 userBalance = usdc.balanceOf(msg.sender);
+        require(userBalance >= budget, "Insufficient USDC balance");
+        
+        // Check if user has approved sufficient USDC to the vault
+        TokenVault vault = TokenVault(0x8D91b58336bc43222D55bC2C5aB3DEF468A54050); // Sepolia TokenVault
+        uint256 allowance = usdc.allowance(msg.sender, address(vault));
+        require(allowance >= budget, "Insufficient USDC allowance to vault");
         // Convert plain values to encrypted values
         euint64 budgetEnc = FHE.asEuint64(budget);
         euint64 amountPerIntervalEnc = FHE.asEuint64(amountPerInterval);
@@ -146,6 +167,12 @@ contract DCAIntentRegistry is SepoliaConfig {
             active: true
         });
         _hasParams[msg.sender] = true;
+
+        // Add to active users list if not already there
+        if (_userIndex[msg.sender] == 0) {
+            _activeUsers.push(msg.sender);
+            _userIndex[msg.sender] = _activeUsers.length;
+        }
 
         emit IntentSubmitted(msg.sender);
         emit TestIntentSubmitted(msg.sender, budget, amountPerInterval, intervalSeconds, totalIntervals);
@@ -201,6 +228,18 @@ contract DCAIntentRegistry is SepoliaConfig {
     function deactivateIntent() external {
         if (!_hasParams[msg.sender]) revert NoIntent();
         _paramsByUser[msg.sender].active = false;
+        
+        // Remove from active users list
+        uint256 index = _userIndex[msg.sender];
+        if (index > 0) {
+            // Swap with last element and pop
+            address lastUser = _activeUsers[_activeUsers.length - 1];
+            _activeUsers[index - 1] = lastUser;
+            _userIndex[lastUser] = index;
+            _activeUsers.pop();
+            _userIndex[msg.sender] = 0;
+        }
+        
         emit IntentDeactivated(msg.sender);
     }
 
@@ -224,6 +263,16 @@ contract DCAIntentRegistry is SepoliaConfig {
         if (!_hasParams[user]) revert NoIntent();
         EncryptedDCAParams storage p = _paramsByUser[user];
         return (p.budget, p.amountPerInterval, p.intervalSeconds, p.totalIntervals, p.spent, p.active);
+    }
+
+    /// @notice Get all active users
+    function getActiveUsers() external view returns (address[] memory) {
+        return _activeUsers;
+    }
+
+    /// @notice Get count of active users
+    function getActiveUserCount() external view returns (uint256) {
+        return _activeUsers.length;
     }
 
     /// @notice Set the authorized batch executor contract

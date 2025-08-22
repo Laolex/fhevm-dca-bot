@@ -12,11 +12,11 @@ function parseArgs() {
 
 async function main() {
     const args = parseArgs();
-    const batchExecutor = args.executor;
-    if (!batchExecutor) throw new Error("Missing --executor=<BatchExecutor>");
+    const batchExecutor = args.executor || process.env.EXECUTOR;
+    if (!batchExecutor) throw new Error("Missing --executor=<BatchExecutor> or EXECUTOR env var");
 
-    const usersPath = args.users;
-    if (!usersPath) throw new Error("Missing --users=<path to json array of addresses>");
+    const usersPath = args.users || process.env.USERS;
+    if (!usersPath) throw new Error("Missing --users=<path to json array of addresses> or USERS env var");
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const users: string[] = require(require("path").resolve(process.cwd(), usersPath));
 
@@ -25,11 +25,11 @@ async function main() {
     const poolFee = Number(args.poolFee ?? "3000");
     const useOracle = (args.useOracle ?? "true").toLowerCase() === "true";
     const oracleTimeoutSec = Number(args.oracleTimeoutSec ?? "30");
-    const rewardVault = args.rewardVault;
-    const usdcVault = args.usdcVault;
-    const dexAdapter = args.dexAdapter;
+    const rewardVault = args.rewardVault || process.env.REWARDVAULT;
+    const usdcVault = args.usdcVault || process.env.USDCVAULT;
+    const dexAdapter = args.dexAdapter || process.env.DEXADAPTER;
     if (!rewardVault || !usdcVault || !dexAdapter) {
-        throw new Error("Missing one of --rewardVault --usdcVault --dexAdapter");
+        throw new Error("Missing one of --rewardVault --usdcVault --dexAdapter or their env vars");
     }
 
     const signerIndex = Number(args.signer ?? "0");
