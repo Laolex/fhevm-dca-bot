@@ -194,7 +194,7 @@ export function DCACard({
                         <div className="text-blue-700 text-sm">⏳ Checking approval status...</div>
                     )}
 
-                    {approvalStatus === 'needed' && (
+                    {(approvalStatus === 'needed' || approvalStatus === 'approving') && (
                         <div className="space-y-3">
                             <div className="text-orange-700 text-sm">
                                 ⚠️ You need to approve USDC to the vault before submitting your DCA intent
@@ -202,10 +202,11 @@ export function DCACard({
                             <button
                                 onClick={handleApprove}
                                 disabled={approvalStatus === 'approving'}
-                                className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${approvalStatus === 'approving'
+                                className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
+                                    approvalStatus === 'approving'
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl'
-                                    }`}
+                                }`}
                             >
                                 {approvalStatus === 'approving' ? '⏳ Approving...' : '🔐 Approve USDC to Vault'}
                             </button>
