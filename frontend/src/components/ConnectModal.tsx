@@ -56,7 +56,7 @@ export function ConnectModal({
                     <h3 className="text-lg font-semibold">Select a wallet</h3>
                     <button className="rounded-full p-2 hover:bg-black/5 dark:hover:bg-white/5" onClick={onClose}>✕</button>
                 </div>
-                
+
                 <div className="space-y-3">
                     {network && !isCorrectNetwork && (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
@@ -88,8 +88,8 @@ export function ConnectModal({
                         </div>
                     )}
 
-                    <button 
-                        onClick={handleConnect} 
+                    <button
+                        onClick={handleConnect}
                         className="w-full flex items-center justify-between rounded-2xl border dark:border-neutral-800 p-3 hover:bg-black/5 dark:hover:bg-white/5"
                     >
                         <div className="flex items-center gap-3">
@@ -101,19 +101,19 @@ export function ConnectModal({
                         </div>
                         {isConnecting ? (
                             <span className="text-xs">
-                                Connecting… 
-                                <span className="inline-block h-3 w-3 rounded-full border-2 border-transparent border-l-neutral-800 animate-spin ml-1"/>
+                                Connecting…
+                                <span className="inline-block h-3 w-3 rounded-full border-2 border-transparent border-l-neutral-800 animate-spin ml-1" />
                             </span>
                         ) : (
                             <span className="text-sm">{installed ? "Connect" : "Install"}</span>
                         )}
                     </button>
-                    
+
                     {!installed && (
-                        <a 
-                            className="block text-center text-sm underline opacity-80 hover:opacity-100" 
-                            href="https://metamask.io/download/" 
-                            target="_blank" 
+                        <a
+                            className="block text-center text-sm underline opacity-80 hover:opacity-100"
+                            href="https://metamask.io/download/"
+                            target="_blank"
                             rel="noreferrer"
                         >
                             Get MetaMask

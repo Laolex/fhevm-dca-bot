@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useIntentsStore } from '../hooks/useIntentsStore';
 import { useToast } from '../contexts/ToastContext';
-import { encryptAndSubmitIntent, generatePeriodChartData } from '../utils/fhe';
+import { encryptAndSubmitIntent, generateChartData } from '../utils/fhe';
 import { DCAIntent } from '../types/dca';
 import Countdown from './Countdown';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Wallet, TrendingUp, Clock, Target } from 'lucide-react';
 
 interface FHEVMDcaBotProps {
   className?: string;
@@ -27,11 +28,11 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
   const { showToast } = useToast();
 
   // Chart data
-  const chartData = generatePeriodChartData(totalBudget, amountPerInterval, totalPeriods);
+  const chartData = generateChartData(intents);
 
   // Countdown logic
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       const diff = nextExecution - Date.now();
       if (diff <= 0) {
         setCountdown("Executing...");
@@ -46,7 +47,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
       }
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => window.clearInterval(timer);
   }, [nextExecution, interval, showToast]);
 
   const handleSubmit = async () => {
@@ -64,7 +65,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
     try {
       await encryptAndSubmitIntent({
         totalBudget,
-        amountPerInterval,
+        perInterval: amountPerInterval,
         interval,
         totalPeriods,
       });
@@ -72,19 +73,16 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
       // Create new intent
       const newIntent: DCAIntent = {
         id: `intent-${Date.now()}`,
-        registry: "0x3F9D1D64CbbD69aBcB79faBD156817655b48050c",
+        user: "0x3F9D1D64CbbD69aBcB79faBD156817655b48050c",
         totalBudget,
         perInterval: amountPerInterval,
         interval,
         totalPeriods,
-        executed: 0,
+        executedPeriods: 0,
         createdAt: Date.now(),
-        status: "active",
-        tokenIn: "USDC",
-        tokenOut: "ETH",
-        amount: amountPerInterval,
-        frequency: interval,
+        isActive: true,
         nextExecution: nextExecution,
+        hasDynamicConditions: false
       };
 
       setIntents([...intents, newIntent]);
@@ -102,7 +100,10 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
       {/* Config + Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>🔐 FHEVM DCA Bot</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            🔐 FHEVM DCA Bot
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
@@ -111,7 +112,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
               type="number"
               value={totalBudget}
               onChange={(e) => setTotalBudget(Number(e.target.value))}
-              className="w-full rounded-xl border dark:border-neutral-700 p-3 bg-transparent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div className="grid gap-2">
@@ -120,7 +121,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
               type="number"
               value={amountPerInterval}
               onChange={(e) => setAmountPerInterval(Number(e.target.value))}
-              className="w-full rounded-xl border dark:border-neutral-700 p-3 bg-transparent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div className="grid gap-2">
@@ -129,9 +130,9 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
               type="number"
               value={interval}
               onChange={(e) => setInterval(Number(e.target.value))}
-              className="w-full rounded-xl border dark:border-neutral-700 p-3 bg-transparent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <small className="text-xs opacity-70">86400 = Daily, 3600 = Hourly</small>
+            <small className="text-xs text-muted-foreground">86400 = Daily, 3600 = Hourly</small>
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Total Periods</label>
@@ -139,7 +140,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
               type="number"
               value={totalPeriods}
               onChange={(e) => setTotalPeriods(Number(e.target.value))}
-              className="w-full rounded-xl border dark:border-neutral-700 p-3 bg-transparent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
@@ -147,17 +148,28 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
             className="w-full"
             onClick={handleSubmit}
             disabled={loading || !walletState.connected || !isCorrectNetwork}
-            variant="primary"
             size="lg"
           >
-            {loading ? "🔐 Encrypting & Submitting..." : "🔐 Encrypt & Submit Intent"}
+            {loading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Encrypting & Submitting...
+              </>
+            ) : (
+              <>
+                <Wallet className="h-4 w-4" />
+                🔐 Encrypt & Submit Intent
+              </>
+            )}
           </Button>
 
-          <div className="text-center text-sm opacity-70">
-            Next Execution in: <span className="font-semibold">{countdown}</span>
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Next Execution:</span>
+            <span className="font-semibold">{countdown}</span>
           </div>
-          <div className="text-center text-sm">
-            Executions Done: <span className="font-bold">{executions}</span> / {totalPeriods}
+          <div className="flex items-center justify-between text-sm">
+            <span>Executions Done:</span>
+            <span className="font-bold">{executions} / {totalPeriods}</span>
           </div>
         </CardContent>
       </Card>
@@ -165,7 +177,10 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
       {/* Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>📊 Spend vs Remaining</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            📊 Spend vs Remaining
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">

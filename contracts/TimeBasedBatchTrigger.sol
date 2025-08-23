@@ -1,116 +1,213 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.20;
 
-import {BatchExecutor} from "./BatchExecutor.sol";
-import {IDCAIntentRegistry} from "./interfaces/IDCAIntentRegistry.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./interfaces/IDCAIntentRegistry.sol";
+import "./interfaces/IBatchExecutor.sol";
 
-/// @title TimeBasedBatchTrigger
-/// @notice Chainlink Automation-compatible contract for time-based batch execution
-/// @dev Triggers batches based on time intervals, regardless of user count
-contract TimeBasedBatchTrigger {
-    BatchExecutor public immutable batchExecutor;
+/**
+ * @title TimeBasedBatchTrigger
+ * @dev Handles time-based batch execution as fallback mechanism
+ * Features:
+ * - Triggers batch execution after specific time intervals
+ * - Fallback mechanism when user count thresholds aren't met
+ * - Configurable time intervals (1 block, 5 seconds, etc.)
+ * - Integration with Chainlink Automation for decentralization
+ */
+contract TimeBasedBatchTrigger is Ownable, ReentrancyGuard {
+    
     IDCAIntentRegistry public immutable registry;
+    IBatchExecutor public immutable batchExecutor;
     
-    uint256 public lastExecutionTime;
-    uint256 public executionInterval; // in seconds
-    uint256 public minBatchUsers;
+    // Time-based configuration
+    uint256 public batchInterval; // Time between batch executions (e.g., 300 seconds = 5 minutes)
+    uint256 public lastBatchTime;
+    uint256 public minBatchSize; // Minimum users required for time-based execution
     
-    address public owner;
+    // Automation configuration
+    address public automationOperator;
+    bool public automationEnabled;
     
-    event BatchTriggered(uint256 timestamp, uint256 userCount);
-    event ExecutionIntervalUpdated(uint256 newInterval);
+    // Events
+    event BatchIntervalUpdated(uint256 newInterval);
+    event TimeBasedBatchTriggered(uint256 timestamp, uint256 participantCount);
+    event AutomationOperatorUpdated(address newOperator);
+    event AutomationToggled(bool enabled);
     
-    error OnlyOwner();
-    error TooSoon();
-    error NoActiveUsers();
+    // Errors
+    error InsufficientParticipants();
+    error BatchNotReady();
+    error Unauthorized();
+    error InvalidInterval();
     
     constructor(
-        address _batchExecutor,
         address _registry,
-        uint256 _executionInterval,
-        uint256 _minBatchUsers
+        address _batchExecutor,
+        uint256 _batchInterval,
+        uint256 _minBatchSize
     ) {
-        batchExecutor = BatchExecutor(_batchExecutor);
         registry = IDCAIntentRegistry(_registry);
-        executionInterval = _executionInterval;
-        minBatchUsers = _minBatchUsers;
-        owner = msg.sender;
-        lastExecutionTime = block.timestamp;
+        batchExecutor = IBatchExecutor(_batchExecutor);
+        batchInterval = _batchInterval;
+        minBatchSize = _minBatchSize;
+        lastBatchTime = block.timestamp;
+        automationEnabled = true;
     }
     
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert OnlyOwner();
-        _;
+    /**
+     * @dev Check if batch should be executed based on time
+     * @return shouldExecute Whether batch should be executed
+     * @return timeSinceLastBatch Time elapsed since last batch
+     */
+    function shouldExecuteBatch() external view returns (bool shouldExecute, uint256 timeSinceLastBatch) {
+        timeSinceLastBatch = block.timestamp - lastBatchTime;
+        shouldExecute = timeSinceLastBatch >= batchInterval;
+        
+        if (shouldExecute) {
+            // Check if there are enough participants
+            (uint32 participantCount, , , , ) = registry.getCurrentBatchInfo();
+            shouldExecute = participantCount >= minBatchSize;
+        }
     }
     
-    /// @notice Check if upkeep is needed (Chainlink Automation interface)
-    function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory performData) {
+    /**
+     * @dev Execute batch based on time trigger
+     * Can be called by automation service or manually
+     */
+    function executeTimeBasedBatch() external nonReentrant {
         // Check if enough time has passed
-        if (block.timestamp < lastExecutionTime + executionInterval) {
-            return (false, bytes(""));
+        require(block.timestamp - lastBatchTime >= batchInterval, "Batch interval not met");
+        
+        // Get current batch info
+        (uint32 participantCount, , , address[] memory participants, ) = registry.getCurrentBatchInfo();
+        
+        // Check minimum participants
+        if (participantCount < minBatchSize) {
+            revert InsufficientParticipants();
         }
-        
-        // Get all users with active intents
-        address[] memory activeUsers = getActiveUsers();
-        
-        if (activeUsers.length < minBatchUsers) {
-            return (false, bytes(""));
-        }
-        
-        // Encode the user list for performUpkeep
-        performData = abi.encode(activeUsers);
-        return (true, performData);
-    }
-    
-    /// @notice Execute the batch (Chainlink Automation interface)
-    function performUpkeep(bytes calldata performData) external {
-        if (block.timestamp < lastExecutionTime + executionInterval) revert TooSoon();
-        
-        address[] memory users = abi.decode(performData, (address[]));
-        
-        if (users.length < minBatchUsers) revert NoActiveUsers();
-        
-        // Update last execution time
-        lastExecutionTime = block.timestamp;
         
         // Execute the batch
-        batchExecutor.executeBatch(users);
+        _executeBatch(participants);
         
-        emit BatchTriggered(block.timestamp, users.length);
-    }
-    
-    /// @notice Get all users with active DCA intents
-    function getActiveUsers() public view returns (address[] memory) {
-        // This is a simplified implementation
-        // In a real scenario, you'd need to maintain a list of active users
-        // or query events to find users with active intents
+        // Update last batch time
+        lastBatchTime = block.timestamp;
         
-        // For now, return an empty array - this would need to be implemented
-        // based on how you want to track active users
-        return new address[](0);
+        emit TimeBasedBatchTriggered(block.timestamp, participantCount);
     }
     
-    /// @notice Set execution interval
-    function setExecutionInterval(uint256 _interval) external onlyOwner {
-        executionInterval = _interval;
-        emit ExecutionIntervalUpdated(_interval);
-    }
-    
-    /// @notice Set minimum batch users
-    function setMinBatchUsers(uint256 _minUsers) external onlyOwner {
-        minBatchUsers = _minUsers;
-    }
-    
-    /// @notice Set owner
-    function setOwner(address _newOwner) external onlyOwner {
-        owner = _newOwner;
-    }
-    
-    /// @notice Manual trigger for testing
-    function manualTrigger(address[] calldata users) external onlyOwner {
-        if (users.length < minBatchUsers) revert NoActiveUsers();
+    /**
+     * @dev Force batch execution (emergency function)
+     * Only callable by owner or automation operator
+     */
+    function forceBatchExecution() external {
+        if (msg.sender != owner() && msg.sender != automationOperator) {
+            revert Unauthorized();
+        }
         
-        batchExecutor.executeBatch(users);
-        emit BatchTriggered(block.timestamp, users.length);
+        (uint32 participantCount, , , address[] memory participants, ) = registry.getCurrentBatchInfo();
+        
+        if (participantCount == 0) {
+            revert InsufficientParticipants();
+        }
+        
+        _executeBatch(participants);
+        lastBatchTime = block.timestamp;
+        
+        emit TimeBasedBatchTriggered(block.timestamp, participantCount);
+    }
+    
+    /**
+     * @dev Execute batch through the registry
+     */
+    function _executeBatch(address[] memory participants) internal {
+        // Call the registry's executeBatch function
+        registry.executeBatch();
+    }
+    
+    /**
+     * @dev Get batch execution status
+     */
+    function getBatchStatus() external view returns (
+        uint256 timeSinceLastBatch,
+        uint256 timeUntilNextBatch,
+        bool canExecute,
+        uint32 currentParticipants
+    ) {
+        timeSinceLastBatch = block.timestamp - lastBatchTime;
+        timeUntilNextBatch = timeSinceLastBatch >= batchInterval ? 0 : batchInterval - timeSinceLastBatch;
+        
+        (uint32 participantCount, , , , ) = registry.getCurrentBatchInfo();
+        currentParticipants = participantCount;
+        
+        canExecute = timeSinceLastBatch >= batchInterval && participantCount >= minBatchSize;
+    }
+    
+    // ============ ADMIN FUNCTIONS ============
+    
+    /**
+     * @dev Update batch interval
+     */
+    function setBatchInterval(uint256 _newInterval) external onlyOwner {
+        if (_newInterval == 0) revert InvalidInterval();
+        batchInterval = _newInterval;
+        emit BatchIntervalUpdated(_newInterval);
+    }
+    
+    /**
+     * @dev Update minimum batch size
+     */
+    function setMinBatchSize(uint256 _newMinSize) external onlyOwner {
+        minBatchSize = _newMinSize;
+    }
+    
+    /**
+     * @dev Set automation operator (e.g., Chainlink Automation)
+     */
+    function setAutomationOperator(address _newOperator) external onlyOwner {
+        automationOperator = _newOperator;
+        emit AutomationOperatorUpdated(_newOperator);
+    }
+    
+    /**
+     * @dev Toggle automation on/off
+     */
+    function toggleAutomation() external onlyOwner {
+        automationEnabled = !automationEnabled;
+        emit AutomationToggled(automationEnabled);
+    }
+    
+    /**
+     * @dev Emergency function to update last batch time
+     */
+    function updateLastBatchTime(uint256 _newTime) external onlyOwner {
+        lastBatchTime = _newTime;
+    }
+    
+    // ============ AUTOMATION FUNCTIONS ============
+    
+    /**
+     * @dev Function for Chainlink Automation to call
+     * Checks if batch should be executed and executes if conditions are met
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory performData) {
+        if (!automationEnabled) {
+            return (false, "");
+        }
+        
+        (bool shouldExecute, ) = this.shouldExecuteBatch();
+        upkeepNeeded = shouldExecute;
+        performData = "";
+    }
+    
+    /**
+     * @dev Function for Chainlink Automation to execute
+     */
+    function performUpkeep(bytes calldata) external {
+        if (msg.sender != automationOperator) {
+            revert Unauthorized();
+        }
+        
+        this.executeTimeBasedBatch();
     }
 }

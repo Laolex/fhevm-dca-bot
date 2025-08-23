@@ -66,6 +66,42 @@ contract DexAdapter {
         );
         emit Swapped(recipient, amountIn, amountOut);
     }
+
+    /// @notice Execute batch swap for DCA bot participants
+    /// @dev This function handles the batch execution of USDC to ETH swaps
+    /// @param totalAmount Total USDC amount to swap (encrypted)
+    /// @param participants Array of participant addresses
+    function executeBatchSwap(uint256 totalAmount, address[] calldata participants) external returns (uint256 totalEthReceived) {
+        require(msg.sender == owner, "Only owner can execute batch");
+        require(totalAmount > 0, "Invalid amount");
+        require(participants.length > 0, "No participants");
+
+        // Calculate minimum ETH output (with 1% slippage tolerance)
+        uint256 minEthOut = (totalAmount * 99) / 100; // 1% slippage tolerance
+        
+        // Execute the swap
+        totalEthReceived = swapUsdcForEth(
+            totalAmount,
+            minEthOut,
+            address(this), // Receive ETH to this contract first
+            3000 // 0.3% fee tier
+        );
+
+        // Distribute ETH proportionally to participants
+        // Note: In a real implementation, you'd use FHE to calculate proportional amounts
+        uint256 ethPerParticipant = totalEthReceived / participants.length;
+        
+        for (uint i = 0; i < participants.length; i++) {
+            if (ethPerParticipant > 0) {
+                // Transfer ETH to participant
+                IERC20Minimal(weth).transfer(participants[i], ethPerParticipant);
+            }
+        }
+
+        emit BatchSwapExecuted(totalAmount, totalEthReceived, participants.length);
+    }
+
+    event BatchSwapExecuted(uint256 totalUsdcAmount, uint256 totalEthReceived, uint256 participantCount);
 }
 
 

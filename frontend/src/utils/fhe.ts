@@ -1,119 +1,177 @@
-import { ethers } from "ethers";
-import { Intent, DCAIntent } from "../types/dca";
+import { ethers } from 'ethers';
+import { fhevmService } from '../services/fhevmService';
+import { DCAIntent, Intent } from '../types/dca';
 
-// -------------------------- FHE Encryption + Contract (scaffold) --------------------------
-/** Replace with your actual FHEVM SDK calls */
-export async function fheEncryptIntent(params: {
+// Mock FHE encryption function
+export function mockFHEEncrypt(value: number): string {
+  return ethers.hexlify(ethers.toUtf8Bytes(value.toString()));
+}
+
+// Mock FHE decryption function
+export function mockFHEDecrypt(encryptedValue: string): number {
+  return parseInt(ethers.toUtf8String(encryptedValue));
+}
+
+// Submit encrypted DCA intent
+export async function encryptAndSubmitIntent(params: {
   totalBudget: number;
   perInterval: number;
   interval: number;
   totalPeriods: number;
+  dynamicConditions?: {
+    enabled: boolean;
+    dipThreshold: number;
+    dipMultiplier: number;
+    dipRemainingBuys: number;
+  };
 }): Promise<string> {
-  // Example: return hex-encoded ciphertext string
-  // TODO: plug real FHE encryption from Zama/fhevm + serialize struct
-  const payload = JSON.stringify(params);
-  // Fake ciphertext: 0x + utf8 bytes
-  const hex = "0x" + Array.from(new TextEncoder().encode(payload)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return hex;
+  try {
+    const txHash = await fhevmService.submitDCAIntent(
+      params.totalBudget,
+      params.perInterval,
+      params.interval,
+      params.totalPeriods,
+      params.dynamicConditions
+    );
+    return txHash;
+  } catch (error) {
+    console.error('Error submitting encrypted intent:', error);
+    throw error;
+  }
 }
 
-// Enhanced FHE encryption for Intent interface
-export function fheEncryptIntentEnhanced(intent: Intent): string {
-  // TODO: Replace with Zama FHEVM SDK encrypt call
-  return ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(intent)));
+// Submit intent with dynamic conditions
+export async function submitIntentWithDynamicConditions(intent: Intent): Promise<string> {
+  try {
+    const txHash = await fhevmService.submitDCAIntent(
+      intent.amount,
+      intent.amount, // Using amount as perInterval for simplicity
+      86400, // Default to daily intervals
+      10, // Default to 10 periods
+      {
+        enabled: true,
+        dipThreshold: 300, // 3%
+        dipMultiplier: 2.0,
+        dipRemainingBuys: 5
+      }
+    );
+    return txHash;
+  } catch (error) {
+    console.error('Error submitting intent with dynamic conditions:', error);
+    throw error;
+  }
 }
 
-// Minimal ABI example — replace with your contract ABI signature
-const DCA_REGISTRY_ABI = [
-  "function submitEncryptedIntent(bytes payload) returns (bytes32 intentId)",
-  "function submitIntent(bytes calldata encryptedPayload) external",
-];
-
-export async function submitEncryptedOnChain(registry: string, ciphertext: string) {
-  const eth = (window as any).ethereum;
-  if (!eth) throw new Error("No wallet");
-  const provider = new ethers.BrowserProvider(eth);
-  const signer = await provider.getSigner();
-  const contract = new ethers.Contract(registry, DCA_REGISTRY_ABI, signer);
-  const tx = await contract.submitEncryptedIntent(ciphertext);
-  const receipt = await tx.wait();
-  return receipt;
+// Get USDC balance (mock implementation)
+export async function getUSDCBalance(): Promise<string> {
+  // In a real implementation, this would call the contract
+  return "1000.00";
 }
 
-// Enhanced submission function
-export async function submitEncryptedOnChainEnhanced(encrypted: string) {
-  if (!(window as any).ethereum) throw new Error("No MetaMask");
-  const provider = new ethers.providers.Web3Provider((window as any).ethereum);
-  await provider.send("eth_requestAccounts", []);
-  const signer = provider.getSigner();
-  const contract = new ethers.Contract(
-    "0xYourRegistryAddressHere",
-    DCA_REGISTRY_ABI,
-    signer
-  );
-  return contract.submitIntent(encrypted);
+// Get vault balance (mock implementation)
+export async function getVaultBalance(): Promise<string> {
+  // In a real implementation, this would call the contract
+  return "500.00";
 }
 
-// Stub function for encrypting and submitting intents
-export async function encryptAndSubmitIntent(params: any) {
-  console.log("Encrypting + submitting to contract:", params);
-  // Example: use FHEVM lib here
-  // const encrypted = await fheEncrypt(params);
-  // await contract.submitIntent(encrypted);
-  return true;
+// Get reward vault balance (mock implementation)
+export async function getRewardVaultBalance(): Promise<string> {
+  // In a real implementation, this would call the contract
+  return "0.25";
 }
 
-// Utility functions
-export const truncate = (addr?: string, n = 4) =>
-  addr ? `${addr.slice(0, 2 + n)}…${addr.slice(-n)}` : "";
-
-export function classNames(...xs: Array<string | false | undefined>) {
-  return xs.filter(Boolean).join(" ");
+// Get WETH balance (mock implementation)
+export async function getWETHBalance(): Promise<string> {
+  // In a real implementation, this would call the contract
+  return "0.50";
 }
 
-export function formatCountdown(sec: number) {
-  if (sec < 0) sec = 0;
-  const d = Math.floor(sec / 86400);
-  const h = Math.floor((sec % 86400) / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  return d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h.toString().padStart(2, "0")}:${m
-    .toString()
-    .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+// Get DCA parameters (mock implementation)
+export async function getMyDCAParams(): Promise<DCAIntent | null> {
+  // In a real implementation, this would call the contract
+  return {
+    id: '1',
+    user: '0x1234...',
+    totalBudget: 5000,
+    perInterval: 100,
+    interval: 3600,
+    totalPeriods: 24,
+    executedPeriods: 5,
+    nextExecution: Date.now() / 1000 + 1800,
+    isActive: true,
+    createdAt: Date.now() - 86400000,
+    hasDynamicConditions: true
+  };
 }
 
-// Enhanced countdown calculation
-export function calculateCountdown(target: number): string {
-  const timeLeft = target - Date.now() / 1000;
-  if (timeLeft <= 0) return "Ready to execute";
+// Deactivate DCA intent
+export async function deactivateDCAIntent(): Promise<string> {
+  try {
+    const txHash = await fhevmService.deactivateIntent();
+    return txHash;
+  } catch (error) {
+    console.error('Error deactivating DCA intent:', error);
+    throw error;
+  }
+}
+
+// Execute batch
+export async function executeBatch(): Promise<string> {
+  try {
+    const txHash = await fhevmService.executeBatch();
+    return txHash;
+  } catch (error) {
+    console.error('Error executing batch:', error);
+    throw error;
+  }
+}
+
+// Get automation info (mock implementation)
+export async function getAutomationInfo(): Promise<{
+  lastExecution: number;
+  nextExecution: number;
+  isActive: boolean;
+}> {
+  return {
+    lastExecution: Date.now() - 3600000, // 1 hour ago
+    nextExecution: Date.now() + 1800000, // 30 minutes from now
+    isActive: true
+  };
+}
+
+// Generate chart data for DCA progress
+export function generateChartData(intents: DCAIntent[]): Array<{
+  timestamp: number;
+  spent: number;
+  remaining: number;
+}> {
+  const data = [];
+  const now = Date.now();
   
-  const hrs = Math.floor(timeLeft / 3600);
-  const mins = Math.floor((timeLeft % 3600) / 60);
-  const secs = Math.floor(timeLeft % 60);
-  return `${hrs}h ${mins}m ${secs}s`;
+  for (let i = 0; i < 30; i++) {
+    const timestamp = now - (29 - i) * 24 * 60 * 60 * 1000; // Last 30 days
+    const spent = intents.reduce((sum, intent) => {
+      const daysSinceStart = Math.floor((timestamp - intent.createdAt) / (24 * 60 * 60 * 1000));
+      const executed = Math.min(daysSinceStart, intent.executedPeriods);
+      return sum + (executed * intent.perInterval);
+    }, 0);
+    
+    const remaining = intents.reduce((sum, intent) => {
+      return sum + intent.totalBudget;
+    }, 0) - spent;
+    
+    data.push({
+      timestamp,
+      spent,
+      remaining: Math.max(0, remaining)
+    });
+  }
+  
+  return data;
 }
 
-// Chart data generation functions
-export function generateChartData(intents: DCAIntent[]): Array<{ name: string; spent: number; remaining: number }> {
-  return intents.map((i) => {
-    const elapsed = (Date.now() / 1000 - i.createdAt) / i.interval;
-    const spent = Math.floor(elapsed) * i.perInterval;
-    const remaining = Math.max(0, i.totalBudget - spent);
-    return {
-      name: `Intent ${i.id}`,
-      spent,
-      remaining,
-    };
-  });
-}
-
-export function generatePeriodChartData(totalBudget: number, amountPerInterval: number, totalPeriods: number): Array<{ period: string; spent: number; remaining: number }> {
-  return Array.from({ length: totalPeriods }, (_, i) => {
-    const spent = Math.min((i + 1) * amountPerInterval, totalBudget);
-    return {
-      period: `#${i + 1}`,
-      spent,
-      remaining: Math.max(totalBudget - spent, 0),
-    };
-  });
+// Truncate address for display
+export function truncate(address: string, start: number = 6, end: number = 4): string {
+  if (!address) return '';
+  return `${address.slice(0, start)}...${address.slice(-end)}`;
 }

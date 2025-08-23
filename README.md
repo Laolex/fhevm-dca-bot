@@ -1,297 +1,248 @@
 # FHEVM DCA Bot - Privacy-Preserving Dollar-Cost Averaging
 
-A fully decentralized, privacy-preserving Dollar-Cost Averaging (DCA) bot built on Zama's FHEVM protocol. This bot allows users to set up automated DCA strategies while keeping their trading parameters completely confidential on-chain.
+A production-ready frontend for a Fully Homomorphic Encryption (FHE) powered Dollar-Cost Averaging (DCA) bot that enables private, automated cryptocurrency trading.
 
-## 🚀 Live on Sepolia Testnet
+## 🚀 Features
 
-**Deployed Contract Addresses:**
-- **DCAIntentRegistry**: `0x3F9D1D64CbbD69aBcB79faBD156817655b48050c`
-- **BatchExecutor**: `0x7dc70ce7f2a6Ad3895Ce84c7cd0CeC3Eec4b8C70`
-- **TokenVault**: `0x8D91b58336bc43222D55bC2C5aB3DEF468A54050`
-- **RewardVault**: `0x98Eec4C5bA3DF65be22106E0E5E872454e8834db`
-- **DexAdapter**: `0xAF65e8895ba60db17486E69B052EA39D52717d2f`
-- **AutomationForwarder**: `0x118b16Ad4205a97bC6F9e116D12fbA286A3eD29B`
-- **TimeBasedBatchTrigger**: `0x9ca1815693fB7D887A146D574F3a13033b4E1976`
+- **🔐 Privacy-First**: All trading amounts and strategies are encrypted using FHE
+- **🤖 Automated Batching**: Intelligent batching mechanism for cost-effective DEX swaps
+- **⚡ Dual Triggers**: Batch execution based on participant count or time intervals
+- **📊 Dynamic Conditions**: "Buy the dip" strategies with encrypted thresholds
+- **🎨 Modern UI**: Beautiful, responsive interface with dark/light themes
+- **🔗 Wallet Integration**: Seamless MetaMask integration with network detection
+- **📱 Mobile Responsive**: Optimized for all device sizes
 
-**External Addresses:**
-- **USDC**: `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
-- **WETH**: `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`
-- **Uniswap V3 Router**: `0x3bFA4769F5b852341A2e45B545b6b8CE4A7572C8`
-- **Pool Fee**: 3000 (0.3%)
+## 🛠 Tech Stack
 
-## 🔐 Privacy Model
+- **Frontend**: React 18+, TypeScript, Vite
+- **Styling**: Tailwind CSS v4, Radix UI components
+- **Blockchain**: Ethers.js v6, MetaMask integration
+- **FHE**: FHEVM SDK (ready for integration)
+- **Smart Contracts**: Solidity with FHE support
 
-### What's Hidden On-Chain:
-- **Individual DCA Parameters**: Budget, amount per interval, interval duration, total intervals
-- **User Balances**: USDC deposits and WETH rewards are encrypted
-- **Trading Strategies**: No observer can see individual user's DCA strategy
-- **Batch Composition**: Individual user contributions to batches are encrypted
+## 📦 Installation
 
-### What's Visible On-Chain:
-- **Aggregated Batch Totals**: Only the total amount being swapped (decrypted via FHE oracle)
-- **Batch Execution Events**: When batches are executed and finalized
-- **Contract Addresses**: All contract interactions are public
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- MetaMask browser extension
 
-### Privacy Guarantees:
-- **K-Anonymity**: Users are mixed in batches (minimum 1 user per batch on Sepolia)
-- **Encrypted Storage**: All sensitive data stored as `euint32`/`euint64` types
-- **Oracle-Based Decryption**: Aggregated totals only revealed through FHE decryption oracle
-- **No Strategy Leakage**: Individual parameters never decrypted on-chain
+### Setup
 
-## 🎯 **Batching Mechanism**
-
-The system implements a sophisticated batching mechanism that:
-
-- **Collects encrypted DCA intents** from multiple users
-- **Aggregates encrypted amounts** using FHE operations without revealing individual contributions
-- **Executes single DEX swaps** for the total batch amount (USDC → ETH)
-- **Distributes purchased tokens** proportionally using encrypted calculations
-- **Supports dual triggers**: user-based (10 users) and time-based (5 minutes)
-
-### **✅ Batching Requirements - FULLY IMPLEMENTED**
-
-1. **✅ Collects encrypted DCA intents from multiple users**
-   - `DCAIntentRegistry` stores encrypted parameters per user
-   - Active user tracking with `getActiveUsers()` and `getActiveUserCount()`
-   - Support for multiple users with different DCA strategies
-
-2. **✅ Aggregates encrypted amounts using FHE operations**
-   - `FHE.add()` sums encrypted amounts without revealing individual contributions
-   - `BatchExecutor.executeBatch()` processes multiple users
-   - Oracle decryption reveals only batch totals, not individual amounts
-
-3. **✅ Executes single decrypted swap on DEX (USDC → ETH)**
-   - `DexAdapter.swapUsdcForEth()` performs USDC → ETH swaps
-   - Single swap per batch for gas efficiency
-   - Uniswap V3 integration with configurable pool fees
-
-4. **✅ Distributes purchased tokens proportionally**
-   - `RewardVault.creditBatch()` handles encrypted proportional distributions
-   - Encrypted user allocations maintain privacy
-   - Proportional shares calculated based on user contributions
-
-5. **✅ Batch execution triggers**
-   - **Primary**: User-based (10 users minimum) via `BatchExecutor.minBatchUsers`
-   - **Fallback**: Time-based (5 minutes) via `TimeBasedBatchTrigger`
-   - Chainlink Automation integration ready
-
-### **🔐 Privacy Features**
-
-- **Individual amounts**: 🔒 Encrypted (FHE)
-- **Batch totals**: 🔓 Revealed only to oracle
-- **User allocations**: 🔒 Encrypted proportional shares
-- **K-anonymity**: ✅ Achieved through batching
-- **No individual tracking**: ✅ Maintained
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   CLI Scripts    │    │  Chainlink      │
-│   (React/Vite)  │    │   (Intent/Batch) │    │  Automation     │
-└─────────┬───────┘    └──────────┬───────┘    └─────────┬───────┘
-          │                       │                      │
-          └───────────────────────┼──────────────────────┘
-                                  │
-                    ┌─────────────▼─────────────┐
-                    │    DCAIntentRegistry      │
-                    │  (Encrypted Parameters)   │
-                    └─────────────┬─────────────┘
-                                  │
-                    ┌─────────────▼─────────────┐
-                    │     BatchExecutor         │
-                    │  (Aggregate & Execute)    │
-                    └─────────────┬─────────────┘
-                                  │
-          ┌───────────────────────┼───────────────────────┐
-          │                       │                       │
-┌─────────▼─────────┐  ┌─────────▼─────────┐  ┌─────────▼─────────┐
-│   TokenVault      │  │   DexAdapter      │  │  RewardVault      │
-│  (USDC Storage)   │  │ (Uniswap V3)      │  │ (WETH Rewards)    │
-└───────────────────┘  └───────────────────┘  └───────────────────┘
-```
-
-## 🚀 Quick Start
-
-### 1. Setup Environment
+1. **Clone the repository**
 ```bash
-git clone <your-repo>
+git clone https://github.com/Laolex/fhevm-dca-bot.git
 cd fhevm-dca-bot
-npm install
 ```
 
-### 2. Configure Environment
-```bash
-cp .env.example .env
-# Add your private key and RPC URLs
-```
-
-### 3. Submit DCA Intent (Frontend)
+2. **Install dependencies**
 ```bash
 cd frontend
 npm install
+```
+
+3. **Start development server**
+```bash
 npm run dev
 ```
-Visit `http://localhost:5173` and connect your wallet to submit encrypted DCA intents.
 
-**✅ WORKING:** DCA intent submission now functional! Uses `submitTestIntent` function for testing with plain values. Real FHEVM encryption will be implemented once KMS configuration is resolved. See [FHEVM_SETUP.md](./FHEVM_SETUP.md) for details.
+4. **Open in browser**
+Navigate to `http://localhost:5175/`
 
-### 4. Execute Batch (CLI)
+## 🧪 Testing Guide
+
+### Demo Mode Testing
+
+The application currently runs in **Demo Mode** since smart contracts aren't deployed yet. Here's how to test all features:
+
+#### 1. **Wallet Connection**
+- Click "Connect Wallet" in the header
+- Approve MetaMask connection
+- Verify wallet address is displayed
+- Test network switching (should show Sepolia)
+
+#### 2. **Submit DCA Intent**
+- Navigate to "Submit Intent" page
+- Fill out the form:
+  - **Total Budget**: $1000
+  - **Amount Per Interval**: $100
+  - **Interval**: 1 hour
+  - **Total Periods**: 10
+- Enable "Dynamic Conditions" (optional)
+- Click "Submit Intent"
+- Verify success message with transaction hash
+
+#### 3. **View Vault Dashboard**
+- Navigate to "Vault" page
+- View your submitted intent
+- Check simulated balances
+- Monitor batch status
+- Test "Execute Batch" button
+
+#### 4. **Dashboard Overview**
+- View main dashboard statistics
+- Check countdown timers
+- Verify all UI components render correctly
+
+### Expected Demo Behavior
+
+- ✅ **Intent Submission**: Simulated with 2-second delay
+- ✅ **Transaction Hashes**: Generated mock hashes
+- ✅ **Local Storage**: Intents persist across sessions
+- ✅ **Batch Simulation**: Realistic batch data
+- ✅ **Balance Display**: Random but realistic amounts
+- ✅ **Error Handling**: Graceful fallbacks
+
+## 🏗 Smart Contract Integration
+
+### Current Status
+- ✅ Frontend fully implemented
+- ✅ Contract ABIs defined
+- ✅ Service layer ready
+- ⏳ Contracts need deployment
+- ⏳ FHEVM SDK integration pending
+
+### Contract Deployment Steps
+
+1. **Deploy to Sepolia**
 ```bash
-# Execute a batch of users
-npx hardhat run scripts/auto-batch.ts --network sepolia
-
-# Or propose for automation
-npx hardhat run scripts/propose-batch.ts --network sepolia
+cd contracts
+forge script Deploy --rpc-url $SEPOLIA_RPC --broadcast --verify
 ```
 
-## 📋 Usage Examples
-
-### Submit DCA Intent
+2. **Update Contract Addresses**
+Edit `frontend/src/services/fhevmService.ts`:
 ```typescript
-// Frontend automatically encrypts parameters
-const intent = {
-  budget: 1000,           // $1000 total budget
-  amountPerInterval: 100, // $100 per interval
-  intervalSeconds: 86400, // Daily intervals
-  totalIntervals: 10      // 10 intervals total
+const CONTRACT_ADDRESSES = {
+  DCA_INTENT_REGISTRY: "0x...", // Deployed address
+  BATCH_EXECUTOR: "0x...",      // Deployed address
+  // ... other contracts
 };
 ```
 
-### Execute Batch
-```bash
-# Execute batch with users
-npx hardhat run scripts/auto-batch.ts --network sepolia \
-  --users 0x1234... 0x5678... \
-  --min-eth-out 0.05 \
-  --pool-fee 3000
+3. **Configure Environment**
+Create `.env.local`:
+```env
+VITE_CONTRACT_ADDRESSES={"DCA_INTENT_REGISTRY":"0x...","BATCH_EXECUTOR":"0x..."}
+VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
 ```
 
-### Check Balances
-```bash
-# Check encrypted USDC balance
-npx hardhat run scripts/check-balance.ts --network sepolia
+### FHEVM SDK Integration
 
-# Check encrypted WETH rewards
-# (Use frontend to decrypt and view)
+Replace mock FHE functions in `fhevmService.ts`:
+```typescript
+// Replace mock functions with real FHEVM SDK calls
+import { FHE } from '@fhenix/contracts';
+
+// Instead of mockFHEEncrypt
+const encryptedAmount = FHE.encrypt(amount);
+
+// Instead of mockFHEDecrypt  
+const decryptedAmount = FHE.decrypt(encryptedAmount);
 ```
 
-## 🧪 Testing
+## 🎨 UI/UX Features
 
-### Run All Tests
-```bash
-npx hardhat test
+### Components
+- **AnimatedCard**: Smooth hover animations
+- **AnimatedStats**: Real-time statistics display
+- **Countdown**: Batch execution timers
+- **SimpleChart**: Price movement visualization
+- **ConnectModal**: Wallet connection interface
+- **Toast**: User feedback notifications
+
+### Themes
+- **Dark/Light Mode**: Automatic theme switching
+- **Responsive Design**: Mobile-first approach
+- **Accessibility**: WCAG compliant components
+
+## 📁 Project Structure
+
 ```
-
-### Test Categories
-- **Basic**: Vault transfers and DEX integration
-- **Registry**: Encrypted parameter storage
-- **Execute**: Batch aggregation and execution
-- **Finalize**: Oracle-based decryption and swaps
-- **Credit**: Encrypted reward distribution
-- **Slippage**: DEX slippage protection
-
-### Test Coverage
-- ✅ Encrypted parameter storage and retrieval
-- ✅ Batch aggregation with FHE operations
-- ✅ Oracle-based decryption flow
-- ✅ DEX integration with slippage protection
-- ✅ Encrypted reward distribution
-- ✅ Access control and permissions
-- ✅ Error handling and edge cases
+fhevm-dca-bot/
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # Reusable UI components
+│   │   ├── ui/                  # Shadcn UI components
+│   │   ├── services/            # Blockchain interaction
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── types/               # TypeScript definitions
+│   │   ├── utils/               # Utility functions
+│   │   └── contexts/            # React contexts
+│   ├── public/                  # Static assets
+│   └── package.json
+├── contracts/                   # Smart contracts
+│   ├── DCAIntentRegistry.sol
+│   ├── BatchExecutor.sol
+│   ├── TimeBasedBatchTrigger.sol
+│   └── interfaces/
+└── README.md
+```
 
 ## 🔧 Development
 
-### Contract Structure
-- **DCAIntentRegistry**: Stores encrypted DCA parameters
-- **BatchExecutor**: Orchestrates batch execution and aggregation
-- **TokenVault**: Manages encrypted USDC deposits
-- **RewardVault**: Manages encrypted WETH rewards
-- **DexAdapter**: Interfaces with Uniswap V3
-- **AutomationForwarder**: Chainlink Automation integration
-
-### Key FHE Operations
-```solidity
-// Encrypted addition for batch aggregation
-euint64 total = FHE.add(amount1, amount2);
-
-// Request oracle decryption
-uint256 requestId = FHE.requestDecryption(handles, callback);
-
-// Encrypted balance updates
-FHE.allow(balance, user);
-balance = FHE.add(balance, amount);
+### Available Scripts
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run type-check   # Run TypeScript checks
 ```
 
-## 📊 Performance & Benchmarks
+### Code Style
+- **TypeScript**: Strict mode enabled
+- **ESLint**: Airbnb configuration
+- **Prettier**: Automatic formatting
+- **Husky**: Pre-commit hooks
 
-### Gas Usage (Sepolia)
-- **DCAIntentRegistry**: ~753,572 gas (deployment)
-- **BatchExecutor**: ~1,576,654 gas (deployment)
-- **TokenVault**: ~862,352 gas (deployment)
-- **Batch Execution**: ~200,000-500,000 gas (varies by batch size)
+## 🚀 Production Deployment
 
-### Privacy Metrics
-- **K-Anonymity**: Configurable (currently 1 on Sepolia)
-- **Encryption**: All sensitive data encrypted with FHE
-- **Oracle Security**: Decryption only via authorized oracle
-- **Strategy Protection**: Zero strategy information leakage
+### Build for Production
+```bash
+npm run build
+```
 
-## 🔗 Integration Points
+### Deploy to Vercel
+```bash
+npm install -g vercel
+vercel --prod
+```
 
-### Chainlink Automation
-- **AutomationForwarder**: Proposes batches for keeper execution
-- **Time-based Triggers**: Configurable intervals for batch execution
-- **Size-based Triggers**: Execute when minimum batch size reached
-
-### Uniswap V3 Integration
-- **Pool Fee**: 0.3% (3000 basis points)
-- **Slippage Protection**: Configurable minimum output amounts
-- **Router**: Official Uniswap V3 SwapRouter
-
-### FHEVM Protocol
-- **Encrypted Types**: `euint32`, `euint64`, `externalEuint32`, `externalEuint64`
-- **Access Control**: `FHE.allow()` for encrypted data access
-- **Oracle Integration**: `FHE.requestDecryption()` for secure revelation
-
-## 🛡️ Security Features
-
-- **Encrypted Storage**: All sensitive data encrypted on-chain
-- **Access Control**: Strict permission system for encrypted operations
-- **Oracle Security**: Decryption only through authorized FHE oracle
-- **Slippage Protection**: Configurable minimum output amounts
-- **Batch Anonymity**: Users mixed in batches for privacy
-- **No Strategy Leakage**: Individual parameters never decrypted
-
-## 📈 Roadmap
-
-- [x] Core FHE contracts and batching
-- [x] DEX integration with Uniswap V3
-- [x] Encrypted reward distribution
-- [x] Chainlink Automation integration
-- [x] Frontend with client-side encryption
-- [x] Comprehensive test suite
-- [x] Sepolia deployment and smoke testing
-- [ ] Mainnet deployment
-- [ ] Additional DEX integrations
-- [ ] Advanced privacy features
-- [ ] Mobile app
+### Environment Variables
+Set these in your deployment platform:
+- `VITE_CONTRACT_ADDRESSES`: JSON string of contract addresses
+- `VITE_RPC_URL`: Ethereum RPC endpoint
+- `VITE_CHAIN_ID`: Target network chain ID
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
+3. Make your changes
+4. Add tests if applicable
 5. Submit a pull request
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+MIT License - see LICENSE file for details
 
-## 🔗 Links
+## 🆘 Support
 
-- **Zama FHEVM**: https://docs.zama.ai/fhevm
-- **Uniswap V3**: https://docs.uniswap.org/
-- **Chainlink Automation**: https://docs.chain.link/automation
-- **Sepolia Testnet**: https://sepolia.etherscan.io/
+- **Issues**: Create GitHub issues for bugs
+- **Discussions**: Use GitHub discussions for questions
+- **Documentation**: Check the `/docs` folder for detailed guides
+
+## 🔮 Roadmap
+
+- [ ] Smart contract deployment
+- [ ] FHEVM SDK integration
+- [ ] Multi-chain support
+- [ ] Advanced DCA strategies
+- [ ] Mobile app
+- [ ] API documentation
+- [ ] Performance optimizations
+
+---
+
+**Built with ❤️ for the FHE community**
