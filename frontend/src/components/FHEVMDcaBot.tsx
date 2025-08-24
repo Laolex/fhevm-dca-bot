@@ -211,7 +211,7 @@ const FHEVMDcaBot: React.FC<FHEVMDcaBotProps> = ({ className = '' }) => {
           </div>
           <div className="flex justify-center gap-4 mt-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <div className="w-3 h-3 bg-emerald-500 rounded"></div>
               <span>Spent</span>
             </div>
             <div className="flex items-center gap-2">

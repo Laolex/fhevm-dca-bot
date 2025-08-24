@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Home, FileText, Wallet, Copy, LogOut, AlertTriangle, Shield } from 'lucide-react';
-import { fhevmService } from '../services/fhevmService';
+import { Button } from './ui/button';
 import ThemeToggle from './ThemeToggle';
+import { useService } from '../contexts/ServiceContext';
+import { useToast } from '../contexts/ToastContext';
+import {
+  Wallet,
+  ChevronDown,
+  Menu,
+  X,
+  Sparkles,
+  BarChart3,
+  FileText,
+  Shield,
+  Bug
+} from 'lucide-react';
 
 const truncate = (addr?: string, n = 4) =>
   addr ? `${addr.slice(0, 2 + n)}…${addr.slice(-n)}` : "";
@@ -11,79 +23,93 @@ function classNames(...xs: Array<string | false | undefined>) {
   return xs.filter(Boolean).join(" ");
 }
 
-function ConnectionBadge({ isConnected, address, isCorrectNetwork }: { 
-  isConnected: boolean; 
+function ConnectionBadge({
+  isConnected,
+  address,
+  isCorrectNetwork
+}: {
+  isConnected: boolean;
   address: string | null;
   isCorrectNetwork: boolean;
 }) {
   if (!isConnected) {
     return (
-      <div className="flex items-center gap-2 text-xs px-2 py-1 rounded-full border bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
-        <span className="opacity-80">Disconnected</span>
-      </div>
-    );
-  }
-
-  if (!isCorrectNetwork) {
-    return (
-      <div className="flex items-center gap-2 text-xs px-2 py-1 rounded-full border bg-yellow-50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400">
-        <AlertTriangle className="h-3 w-3" />
-        <span className="opacity-80">Wrong Network</span>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="w-2 h-2 rounded-full bg-destructive" />
+        <span>Not Connected</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs px-2 py-1 rounded-full border bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400">
-      <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
-      <span className="opacity-80">{truncate(address || undefined)}</span>
+    <div className="flex items-center gap-2">
+      <div className={classNames(
+        "w-2 h-2 rounded-full",
+        isCorrectNetwork ? "bg-emerald-600" : "bg-yellow-600"
+      )} />
+      <span className="text-sm font-mono">{truncate(address || undefined)}</span>
+      {!isCorrectNetwork && (
+        <span className="text-xs text-yellow-700 bg-yellow-100 dark:bg-yellow-900/20 px-2 py-1 rounded">
+          Wrong Network
+        </span>
+      )}
     </div>
   );
 }
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const { service } = useService();
+  const { showToast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
-  const [currentNetwork, setCurrentNetwork] = useState<string>('');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigation = [
+    { name: 'Home', href: '/', icon: Sparkles },
+    { name: 'Submit', href: '/submit', icon: FileText },
+    { name: 'Vault', href: '/vault', icon: Shield },
+    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+    { name: 'Debug', href: '/debug', icon: Bug },
+    { name: 'Contract Debug', href: '/contract-debug', icon: Bug },
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Check connection status on mount
   useEffect(() => {
     checkConnectionStatus();
-  }, []);
+    checkNetwork();
+  }, [service]);
 
   const checkConnectionStatus = async () => {
+    if (!service) return;
+
     try {
-      const connected = fhevmService.isConnected();
+      const connected = service.isConnected();
       setIsConnected(connected);
-      
+
       if (connected) {
-        const addr = await fhevmService.getConnectedAddress();
+        const addr = await service.getConnectedAddress();
         setAddress(addr);
-        
-        // Check network
-        await checkNetwork();
+      } else {
+        setAddress(null);
       }
     } catch (error) {
       console.error('Error checking connection status:', error);
+      setIsConnected(false);
+      setAddress(null);
     }
   };
 
   const checkNetwork = async () => {
+    if (!service) return;
+
     try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) return;
-      
-      const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
-      const network = await provider.getNetwork();
-      const chainId = Number(network.chainId);
-      
-      setCurrentNetwork(network.name);
-      setIsCorrectNetwork(chainId === 11155111); // Sepolia chain ID
+      // Check if connected to Sepolia (chain ID 11155111)
+      const chainId = await service['provider']?.getNetwork();
+      setIsCorrectNetwork(chainId?.chainId === 11155111n);
     } catch (error) {
       console.error('Error checking network:', error);
       setIsCorrectNetwork(false);
@@ -91,82 +117,57 @@ const Header: React.FC = () => {
   };
 
   const switchToSepolia = async () => {
+    if (!service) return;
+
     try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) return;
-      
-      await (window as any).ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xaa36a7' }], // Sepolia chain ID in hex
-      });
-      
+      await service['provider']?.send('wallet_switchEthereumChain', [
+        { chainId: '0xaa36a7' } // Sepolia chain ID
+      ]);
       await checkNetwork();
+      showToast('Switched to Sepolia network', 'success');
     } catch (error: any) {
       if (error.code === 4902) {
         // Chain not added, add it
         try {
-          await (window as any).ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
+          await service['provider']?.send('wallet_addEthereumChain', [
+            {
               chainId: '0xaa36a7',
               chainName: 'Sepolia',
               nativeCurrency: {
                 name: 'Sepolia Ether',
                 symbol: 'SEP',
-                decimals: 18
+                decimals: 18,
               },
-              rpcUrls: ['https://sepolia.infura.io/v3/'],
-              blockExplorerUrls: ['https://sepolia.etherscan.io/']
-            }]
-          });
+              rpcUrls: ['https://sepolia.infura.io/v3/your-project-id'],
+              blockExplorerUrls: ['https://sepolia.etherscan.io'],
+            },
+          ]);
           await checkNetwork();
+          showToast('Added and switched to Sepolia network', 'success');
         } catch (addError) {
-          console.error('Error adding Sepolia network:', addError);
-          alert('Failed to add Sepolia network. Please add it manually in MetaMask.');
+          showToast('Failed to add Sepolia network', 'error');
         }
       } else {
-        console.error('Error switching to Sepolia:', error);
-        alert('Failed to switch to Sepolia network.');
+        showToast('Failed to switch network', 'error');
       }
     }
   };
 
   const connectWallet = async () => {
-    if (isConnecting) return;
-    
+    if (!service) {
+      showToast('Service not initialized', 'error');
+      return;
+    }
+
     setIsConnecting(true);
     try {
-      // Check if MetaMask is installed
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
-        alert('MetaMask is not installed. Please install MetaMask to use this application.');
-        return;
-      }
-
-      // Request account access
-      const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
-      await provider.send("eth_requestAccounts", []);
-      
-      // Get the signer
-      const signer = await provider.getSigner();
-      const addr = await signer.getAddress();
-      
-      // Update connection status
-      setIsConnected(true);
-      setAddress(addr);
-      
-      // Check network
+      await service.reinitializeProvider();
+      await checkConnectionStatus();
       await checkNetwork();
-      
-      // Reinitialize the service with the new provider
-      await fhevmService.reinitializeProvider();
-      
-      console.log('Wallet connected:', addr);
-    } catch (error) {
+      showToast('Wallet connected successfully', 'success');
+    } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      if (error instanceof Error) {
-        alert(`Failed to connect wallet: ${error.message}`);
-      } else {
-        alert('Failed to connect wallet. Please try again.');
-      }
+      showToast(error.message || 'Failed to connect wallet', 'error');
     } finally {
       setIsConnecting(false);
     }
@@ -174,11 +175,10 @@ const Header: React.FC = () => {
 
   const disconnectWallet = async () => {
     try {
+      // In a real implementation, you might want to clear the connection
       setIsConnected(false);
       setAddress(null);
-      setIsCorrectNetwork(false);
-      setCurrentNetwork('');
-      console.log('Wallet disconnected');
+      showToast('Wallet disconnected', 'info');
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
     }
@@ -186,93 +186,212 @@ const Header: React.FC = () => {
 
   const copyAddress = async () => {
     if (!address) return;
-    
+
     try {
       await navigator.clipboard.writeText(address);
-      // You could add a toast notification here
-      console.log('Address copied to clipboard');
+      showToast('Address copied to clipboard', 'success');
     } catch (error) {
-      console.error('Failed to copy address:', error);
+      showToast('Failed to copy address', 'error');
     }
   };
 
   return (
-    <header className="sticky top-0 z-30 backdrop-blur bg-yellow-50/80 dark:bg-yellow-950/20 border-b border-yellow-200 dark:border-yellow-800">
-      <div className="max-w-6xl mx-auto flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600" />
-            <div className="font-bold text-lg text-yellow-900 dark:text-yellow-100">FHEVM DCA Bot</div>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-500 rounded-lg flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold gradient-text">FHEVM DCA</span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-sm font-medium transition-colors hover:text-yellow-600" style={{ color: 'inherit' }}>
-              Home
-            </Link>
-            <Link to="/submit" className="text-sm font-medium transition-colors hover:text-yellow-600" style={{ color: 'inherit' }}>
-              Submit Intent
-            </Link>
-            <Link to="/dashboard" className="text-sm font-medium transition-colors hover:text-yellow-600" style={{ color: 'inherit' }}>
-              Dashboard
-            </Link>
-            <Link to="/vault" className="text-sm font-medium transition-colors hover:text-yellow-600" style={{ color: 'inherit' }}>
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={classNames(
+                    "flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    isActive(item.href)
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right side */}
+          <div className="flex items-center space-x-4">
+            {/* Vault Button */}
+            <Link
+              to="/vault"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-950/60 transition-colors"
+              title="View Vault"
+            >
+              <Shield className="h-4 w-4" />
               Vault
             </Link>
-          </nav>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Wallet Connection */}
+            <div className="hidden sm:flex items-center space-x-4">
+              {isConnected ? (
+                <div className="flex items-center space-x-3">
+                  <ConnectionBadge
+                    isConnected={isConnected}
+                    address={address}
+                    isCorrectNetwork={isCorrectNetwork}
+                  />
+                  {!isCorrectNetwork && (
+                    <Button
+                      onClick={switchToSepolia}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Switch to Sepolia
+                    </Button>
+                  )}
+                  <Button
+                    onClick={copyAddress}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    onClick={disconnectWallet}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={connectWallet}
+                  disabled={isConnecting}
+                  variant="default"
+                >
+                  {isConnecting ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      <span>Connecting...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Wallet className="h-4 w-4 mr-2" />
+                      Connect Wallet
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Vault Button */}
-          <Link 
-            to="/vault"
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-950/60 transition-colors"
-            title="View Vault"
-          >
-            <Shield className="h-4 w-4" />
-            Vault
-          </Link>
-          
-          <ConnectionBadge isConnected={isConnected} address={address} isCorrectNetwork={isCorrectNetwork} />
-          <ThemeToggle />
-          
-          {isConnected ? (
-            <div className="flex items-center gap-2">
-              {!isCorrectNetwork && (
-                <button 
-                  onClick={switchToSepolia}
-                  className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-950/60 transition-colors"
-                  title="Switch to Sepolia"
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Switch to Sepolia
-                </button>
-              )}
-              <button 
-                onClick={copyAddress}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-950/40 transition-colors"
-                title="Copy address"
-              >
-                <Copy className="h-4 w-4" />
-                {truncate(address || undefined)}
-              </button>
-              <button 
-                onClick={disconnectWallet}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-950/40 transition-colors"
-                title="Disconnect wallet"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={classNames(
+                      "flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium",
+                      isActive(item.href)
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Mobile wallet section */}
+              <div className="pt-4 border-t">
+                {isConnected ? (
+                  <div className="space-y-2">
+                    <ConnectionBadge
+                      isConnected={isConnected}
+                      address={address}
+                      isCorrectNetwork={isCorrectNetwork}
+                    />
+                    {!isCorrectNetwork && (
+                      <Button
+                        onClick={switchToSepolia}
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Switch to Sepolia
+                      </Button>
+                    )}
+                    <Button
+                      onClick={disconnectWallet}
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Disconnect Wallet
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={connectWallet}
+                    disabled={isConnecting}
+                    variant="default"
+                    className="w-full"
+                  >
+                    {isConnecting ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Connecting...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Wallet className="h-4 w-4 mr-2" />
+                        Connect Wallet
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
-          ) : (
-            <button 
-              onClick={connectWallet}
-              disabled={isConnecting}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-yellow-300 dark:border-yellow-700 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Wallet className="h-4 w-4" />
-              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </header>
   );

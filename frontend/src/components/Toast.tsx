@@ -27,7 +27,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, duration = 5000, onClose }
 
         switch (type) {
             case 'success':
-                return `${baseStyles} bg-green-500 text-white border border-green-400`;
+                return `${baseStyles} bg-emerald-500 text-white border border-emerald-400`;
             case 'error':
                 return `${baseStyles} bg-red-500 text-white border border-red-400`;
             case 'warning':

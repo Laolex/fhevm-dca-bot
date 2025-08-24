@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import {
   Wallet,
   DollarSign,
@@ -22,12 +21,18 @@ import {
   Pause,
   TrendingDown,
   Vault,
-  Gift
+  Gift,
+  Sparkles,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { fhevmService } from '../services/fhevmService';
+import { useService } from '../contexts/ServiceContext';
 import { BatchInfo, BatchConfig, DCAIntent } from '../types/dca';
+import { ModernCard, StatsCard, FeatureCard, ActionCard } from '../components/ui/modern-card';
+import { Link } from 'react-router-dom';
 
 const VaultPage: React.FC = () => {
+  const { service } = useService();
   const [isLoading, setIsLoading] = useState(true);
   const [batchInfo, setBatchInfo] = useState<BatchInfo | null>(null);
   const [batchConfig, setBatchConfig] = useState<BatchConfig | null>(null);
@@ -47,11 +52,15 @@ const VaultPage: React.FC = () => {
   const loadVaultData = async () => {
     setIsLoading(true);
     try {
+      if (!service) {
+        throw new Error('Service not initialized');
+      }
+
       // Try to load real balances first
-      const usdcBalance = await fhevmService.getUSDCBalance();
-      const wethBalance = await fhevmService.getWETHBalance();
-      const vaultBalance = await fhevmService.getVaultBalance();
-      const rewardVaultBalance = await fhevmService.getRewardVaultBalance();
+      const usdcBalance = await service.getUSDCBalance();
+      const wethBalance = await service.getWETHBalance();
+      const vaultBalance = await service.getVaultBalance();
+      const rewardVaultBalance = await service.getRewardVaultBalance();
 
       setBalances({
         usdc: usdcBalance,
@@ -61,15 +70,15 @@ const VaultPage: React.FC = () => {
       });
 
       // Try to load real batch information first
-      const currentBatch = await fhevmService.getCurrentBatchInfo();
-      const config = await fhevmService.getBatchConfig();
+      const currentBatch = await service.getCurrentBatchInfo();
+      const config = await service.getBatchConfig();
 
       setBatchInfo(currentBatch);
       setBatchConfig(config);
 
       // Load user intent (if connected)
-      if (fhevmService.isConnected()) {
-        const address = await fhevmService.getConnectedAddress();
+      if (service.isConnected()) {
+        const address = await service.getConnectedAddress();
         if (address) {
           // In a real implementation, you'd fetch the actual intent
           // For now, we'll use mock data
@@ -93,54 +102,45 @@ const VaultPage: React.FC = () => {
 
       // Demo mode - simulate balances
       setBalances({
-        usdc: (Math.random() * 10000).toFixed(2),
-        weth: (Math.random() * 5).toFixed(4),
-        vault: (Math.random() * 5000).toFixed(2),
-        rewardVault: (Math.random() * 100).toFixed(2)
+        usdc: '1250.50',
+        weth: '0.8500',
+        vault: '500.00',
+        rewardVault: '25.75'
       });
 
-      // Demo mode - simulate vault data
-      const demoIntents = JSON.parse(localStorage.getItem('dcaIntents') || '[]');
-      const activeIntents = demoIntents.filter((intent: any) =>
-        intent.status === 'active' // Filter active intents
-      );
-
-      // Mock batch info
+      // Demo batch info
       setBatchInfo({
         batchId: 1,
-        participantCount: activeIntents.length,
-        totalAmount: 0, // Encrypted, not revealed
-        batchDeadline: Date.now() / 1000 + 300, // 5 minutes from now
+        participantCount: 8,
+        totalAmount: 5000,
+        batchDeadline: Date.now() + 1800000,
         isExecuted: false,
-        participants: activeIntents.map((intent: any) => `0x${Math.random().toString(16).substr(2, 40)}`),
-        createdAt: Date.now(),
-        timeUntilExecution: 300
+        participants: [],
+        createdAt: Date.now() - 3600000,
+        timeUntilExecution: 1800
       });
 
       setBatchConfig({
         targetSize: 10,
-        timeout: 300,
-        minSize: 3,
-        maxSize: 20
+        timeout: 3600,
+        minSize: 100,
+        maxSize: 1000
       });
 
-      // Mock user intent from localStorage
-      if (activeIntents.length > 0) {
-        const latestIntent = activeIntents[activeIntents.length - 1];
-        setUserIntent({
-          id: latestIntent.id,
-          user: '0x' + Math.random().toString(16).substr(2, 40),
-          totalBudget: latestIntent.totalBudget,
-          perInterval: latestIntent.amountPerInterval,
-          interval: latestIntent.intervalSeconds,
-          totalPeriods: latestIntent.totalPeriods,
-          executedPeriods: latestIntent.executedPeriods || 0,
-          nextExecution: Date.now() / 1000 + Math.random() * 3600,
-          isActive: latestIntent.status === 'active',
-          createdAt: new Date(latestIntent.submittedAt).getTime(),
-          hasDynamicConditions: !!latestIntent.dynamicConditions
-        });
-      }
+      // Demo user intent
+      setUserIntent({
+        id: '1',
+        user: '0x1234...5678',
+        totalBudget: 5000,
+        perInterval: 100,
+        interval: 3600,
+        totalPeriods: 24,
+        executedPeriods: 5,
+        nextExecution: Date.now() / 1000 + 1800,
+        isActive: true,
+        createdAt: Date.now() - 86400000,
+        hasDynamicConditions: true
+      });
     } finally {
       setIsLoading(false);
     }
@@ -149,34 +149,16 @@ const VaultPage: React.FC = () => {
   const handleExecuteBatch = async () => {
     setIsExecuting(true);
     try {
-      // Try to execute real batch first
-      const txHash = await fhevmService.executeBatch();
-      alert(`Batch executed successfully! Transaction: ${txHash}`);
-
-      // Reload data
-      await loadVaultData();
-    } catch (error) {
-      console.log('Using demo execute batch:', error);
-
-      // Demo mode - simulate batch execution
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate network delay
-
-      // Generate mock transaction hash
-      const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
-
-      // Update batch status
-      if (batchInfo) {
-        setBatchInfo({
-          ...batchInfo,
-          isExecuted: true,
-          timeUntilExecution: 0
-        });
+      if (!service) {
+        throw new Error('Service not initialized');
       }
 
-      alert(`Demo: Batch executed successfully! Transaction: ${mockTxHash}`);
-
-      // Reload data
+      const txHash = await service.executeBatch();
+      console.log('Batch executed:', txHash);
+      // Reload data after execution
       await loadVaultData();
+    } catch (error) {
+      console.error('Error executing batch:', error);
     } finally {
       setIsExecuting(false);
     }
@@ -184,359 +166,328 @@ const VaultPage: React.FC = () => {
 
   const handleDeactivateIntent = async () => {
     try {
-      // Try to deactivate real intent first
-      const txHash = await fhevmService.deactivateIntent();
-      alert(`Intent deactivated successfully! Transaction: ${txHash}`);
+      if (!service || !userIntent) {
+        throw new Error('Service not initialized or no intent found');
+      }
+
+      const txHash = await service.deactivateIntent();
+      console.log('Intent deactivated:', txHash);
       setUserIntent(null);
     } catch (error) {
-      console.log('Using demo deactivate intent:', error);
-
-      // Demo mode - simulate deactivation
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-      // Remove from localStorage
-      const demoIntents = JSON.parse(localStorage.getItem('dcaIntents') || '[]');
-      const updatedIntents = demoIntents.map((intent: any) =>
-        intent.id === userIntent?.id
-          ? { ...intent, status: 'inactive' }
-          : intent
-      );
-      localStorage.setItem('dcaIntents', JSON.stringify(updatedIntents));
-
-      alert('Demo: Intent deactivated successfully!');
-      setUserIntent(null);
+      console.error('Error deactivating intent:', error);
     }
   };
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
   };
 
-  const formatTimeUntilExecution = (timestamp: number) => {
-    const now = Date.now() / 1000;
-    const diff = timestamp - now;
-    if (diff <= 0) return 'Ready to execute';
-    return formatTime(diff);
+  const formatCurrency = (amount: string, symbol: string = 'USDC') => {
+    const num = parseFloat(amount);
+    if (isNaN(num)) return `0.00 ${symbol}`;
+    return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${symbol}`;
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground p-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="text-gray-600 dark:text-gray-400">Loading vault data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-800 dark:from-yellow-400 dark:to-yellow-600 bg-clip-text text-transparent mb-4" style={{ background: 'linear-gradient(to right, #d97706, #92400e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Vault Dashboard
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Hero Section */}
+        <div className="text-center space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-200/50 dark:border-purple-700/50 rounded-full backdrop-blur-sm">
+            <Vault className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              Vault Dashboard
+            </span>
+          </div>
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-pink-900 dark:from-white dark:via-purple-200 dark:to-pink-200 bg-clip-text text-transparent">
+            Vault Overview
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Monitor your encrypted DCA intents and vault balances
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            Monitor your encrypted DCA strategies and vault balances in real-time
           </p>
         </div>
 
-        {/* Vault Balances */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                USDC Balance
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                ${balances.usdc}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Balance Stats */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <StatsCard
+            title="USDC Balance"
+            value={formatCurrency(balances.usdc, 'USDC')}
+            icon={<DollarSign className="h-6 w-6 text-emerald-600" />}
+            trend={{ value: 'Available', isPositive: true }}
+            className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-200/50 dark:border-green-700/50"
+          />
 
-          <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                WETH Balance
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                {balances.weth}
-              </div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="WETH Balance"
+            value={formatCurrency(balances.weth, 'WETH')}
+            icon={<TrendingUp className="h-6 w-6 text-orange-600" />}
+            trend={{ value: 'Accumulated', isPositive: true }}
+            className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-200/50 dark:border-orange-700/50"
+          />
 
-          <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                Vault Balance
-              </CardTitle>
-              <Vault className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                ${balances.vault}
-              </div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Vault Balance"
+            value={formatCurrency(balances.vault, 'USDC')}
+            icon={<Shield className="h-6 w-6 text-blue-600" />}
+            trend={{ value: 'Locked', isPositive: true }}
+            className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-200/50 dark:border-blue-700/50"
+          />
 
-          <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                Rewards
-              </CardTitle>
-              <Gift className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                ${balances.rewardVault}
-              </div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="Rewards"
+            value={formatCurrency(balances.rewardVault, 'USDC')}
+            icon={<Gift className="h-6 w-6 text-purple-600" />}
+            trend={{ value: 'Earned', isPositive: true }}
+            className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-200/50 dark:border-purple-700/50"
+          />
         </div>
 
-        {/* Batch Status Overview */}
-        {batchInfo && batchConfig && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Current Batch Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Participants</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {batchInfo.participantCount} / {batchConfig.targetSize}
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min((batchInfo.participantCount / batchConfig.targetSize) * 100, 100)}%` }}
-                    ></div>
+        {/* Main Content */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Batch Information */}
+          <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <ModernCard variant="glass" className="p-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      Current Batch
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Real-time batch execution status
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${batchInfo?.isExecuted ? 'bg-emerald-500' : 'bg-yellow-500 animate-pulse'}`} />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {batchInfo?.isExecuted ? 'Executed' : 'Pending'}
+                    </span>
                   </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Time Until Execution</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatTime(batchInfo.timeUntilExecution)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Batch Status</p>
-                  <div className="flex items-center justify-center gap-2 mt-1">
-                    {batchInfo.isExecuted ? (
-                      <>
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <span className="text-green-600 font-semibold">Executed</span>
-                      </>
-                    ) : batchInfo.participantCount >= batchConfig.targetSize ? (
-                      <>
-                        <Play className="h-5 w-5 text-blue-600" />
-                        <span className="text-blue-600 font-semibold">Ready</span>
-                      </>
-                    ) : (
-                      <>
-                        <Timer className="h-5 w-5 text-yellow-600" />
-                        <span className="text-yellow-600 font-semibold">Waiting</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Actions</p>
-                  <Button
-                    onClick={handleExecuteBatch}
-                    disabled={isExecuting || batchInfo.isExecuted || batchInfo.participantCount < batchConfig.minSize}
-                    size="sm"
-                    className="mt-2"
-                  >
-                    {isExecuting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Zap className="h-4 w-4 mr-1" />
-                        Execute
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* User's DCA Strategy */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                Your DCA Strategy
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userIntent ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Budget</p>
-                      <p className="text-lg font-semibold">${userIntent.totalBudget} USDC</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Per Purchase</p>
-                      <p className="text-lg font-semibold">${userIntent.perInterval} USDC</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Progress</p>
-                      <p className="text-lg font-semibold">
-                        {userIntent.executedPeriods} / {userIntent.totalPeriods}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Next Execution</p>
-                      <p className="text-lg font-semibold">
-                        {formatTimeUntilExecution(userIntent.nextExecution)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{Math.round((userIntent.executedPeriods / userIntent.totalPeriods) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(userIntent.executedPeriods / userIntent.totalPeriods) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Conditions */}
-                  {userIntent.hasDynamicConditions && (
-                    <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingDown className="h-4 w-4 text-blue-600" />
-                        <span className="font-semibold text-blue-900 dark:text-blue-100">
-                          Dynamic Conditions Active
-                        </span>
+                {batchInfo && (
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="text-center p-4 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-200/50 dark:border-blue-700/50">
+                      <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {batchInfo.participantCount}
                       </div>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Your strategy includes buy-the-dip logic that automatically increases
-                        purchase amounts when ETH price drops.
-                      </p>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Participants
+                      </div>
                     </div>
-                  )}
 
-                  <Button
-                    onClick={handleDeactivateIntent}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Pause className="h-4 w-4 mr-2" />
-                    Deactivate Strategy
-                  </Button>
+                    <div className="text-center p-4 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-200/50 dark:border-emerald-700/50">
+                      <DollarSign className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        ${batchInfo.totalAmount.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Total Amount
+                      </div>
+                    </div>
+
+                    <div className="text-center p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl border border-orange-200/50 dark:border-orange-700/50">
+                      <Timer className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {formatTime(batchInfo.timeUntilExecution)}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Time Remaining
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {batchConfig && (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        Batch Configuration
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">Target Size:</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{batchConfig.targetSize}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">Min Size:</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">${batchConfig.minSize}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">Max Size:</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">${batchConfig.maxSize}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">Timeout:</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{formatTime(batchConfig.timeout)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        Actions
+                      </h3>
+                      <div className="space-y-3">
+                        <Button
+                          onClick={handleExecuteBatch}
+                          disabled={isExecuting || batchInfo?.isExecuted || (batchInfo?.participantCount || 0) < (batchConfig?.targetSize || 0)}
+                          className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                        >
+                          {isExecuting ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Executing...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Zap className="h-4 w-4" />
+                              <span>Execute Batch</span>
+                            </div>
+                          )}
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => window.location.reload()}
+                        >
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            <span>Refresh Data</span>
+                          </div>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ModernCard>
+          </div>
+
+          {/* User Intent Sidebar */}
+          <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            {userIntent ? (
+              <ModernCard variant="glass" className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Your DCA Intent
+                    </h3>
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${userIntent.isActive
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300'
+                      }`}>
+                      {userIntent.isActive ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">Total Budget:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">${userIntent.totalBudget}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">Per Interval:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">${userIntent.perInterval}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">Progress:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {userIntent.executedPeriods}/{userIntent.totalPeriods}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">Next Execution:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {formatTime(Math.max(0, userIntent.nextExecution - Date.now() / 1000))}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button
+                      onClick={handleDeactivateIntent}
+                      variant="outline"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-50 dark:border-red-700 dark:hover:bg-red-950/20"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Pause className="h-4 w-4" />
+                        <span>Deactivate Intent</span>
+                      </div>
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">No active DCA strategy</p>
-                  <Button asChild>
-                    <a href="/submit">
+              </ModernCard>
+            ) : (
+              <ModernCard variant="glass" className="p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-200/50 dark:border-blue-700/50">
+                <div className="text-center space-y-4">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto">
+                    <Plus className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No Active Intent</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">
+                      You don't have any active DCA intents. Create one to start dollar-cost averaging.
+                    </p>
+                  </div>
+                  <Button asChild className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <Link to="/submit">
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Strategy
-                    </a>
+                      Create Intent
+                    </Link>
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </ModernCard>
+            )}
 
-          {/* Batch Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Batch Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {batchConfig ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Target Size</p>
-                      <p className="text-lg font-semibold">{batchConfig.targetSize} users</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Min Size</p>
-                      <p className="text-lg font-semibold">{batchConfig.minSize} users</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Max Size</p>
-                      <p className="text-lg font-semibold">{batchConfig.maxSize} users</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Timeout</p>
-                      <p className="text-lg font-semibold">{formatTime(batchConfig.timeout)}</p>
-                    </div>
-                  </div>
+            {/* Features */}
+            <div className="space-y-4">
+              <FeatureCard
+                icon={<Shield className="h-6 w-6 text-emerald-600" />}
+                title="Secure Vault"
+                description="All funds are secured in smart contracts with FHE encryption"
+                className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-200/50 dark:border-emerald-700/50"
+              />
 
-                  <div className="bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                          Batch Execution Triggers
-                        </p>
-                        <ul className="text-yellow-700 dark:text-yellow-300 mt-1 space-y-1">
-                          <li>• Primary: {batchConfig.targetSize} users submit intents</li>
-                          <li>• Fallback: {formatTime(batchConfig.timeout)} timeout</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">Loading configuration...</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              <FeatureCard
+                icon={<Zap className="h-6 w-6 text-purple-600" />}
+                title="Automated Execution"
+                description="Batches execute automatically when conditions are met"
+                className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-200/50 dark:border-purple-700/50"
+              />
 
-        {/* Privacy & Security Info */}
-        <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-2">
-              <Shield className="h-5 w-5 text-green-600 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-100">
-                  Privacy & Security Features
-                </h4>
-                <ul className="text-sm text-green-700 dark:text-green-300 mt-2 space-y-1">
-                  <li>• All DCA parameters are encrypted using FHE</li>
-                  <li>• Individual amounts remain private during batching</li>
-                  <li>• Proportional token distribution using encrypted calculations</li>
-                  <li>• Decentralized execution with Chainlink Automation</li>
-                  <li>• Single DEX swap per batch for efficiency</li>
-                </ul>
-              </div>
+              <FeatureCard
+                icon={<Gift className="h-6 w-6 text-orange-600" />}
+                title="Rewards System"
+                description="Earn rewards for participating in batch executions"
+                className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-200/50 dark:border-orange-700/50"
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

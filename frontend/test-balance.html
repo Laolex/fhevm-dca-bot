@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDC Balance Test</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+</head>
+<body>
+    <h1>USDC Balance Test</h1>
+    <div id="status">Checking connection...</div>
+    <div id="balance">Balance: --</div>
+    <div id="error"></div>
+    
+    <script>
+        async function testUSDCBalance() {
+            const statusDiv = document.getElementById('status');
+            const balanceDiv = document.getElementById('balance');
+            const errorDiv = document.getElementById('error');
+            
+            try {
+                // Check if MetaMask is installed
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('MetaMask is not installed');
+                }
+                
+                statusDiv.textContent = 'Connecting to wallet...';
+                
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const address = accounts[0];
+                
+                statusDiv.textContent = `Connected: ${address}`;
+                
+                // Check network
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== '0xaa36a7') { // Sepolia chain ID
+                    throw new Error('Please switch to Sepolia testnet');
+                }
+                
+                // Create provider and signer
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                
+                // USDC contract address (Sepolia)
+                const usdcAddress = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+                
+                // ERC20 ABI
+                const erc20Abi = [
+                    "function name() external view returns (string memory)",
+                    "function symbol() external view returns (string memory)",
+                    "function decimals() external view returns (uint8)",
+                    "function balanceOf(address account) external view returns (uint256)"
+                ];
+                
+                // Create contract instance
+                const usdcContract = new ethers.Contract(usdcAddress, erc20Abi, signer);
+                
+                // Get token info
+                const [name, symbol, decimals] = await Promise.all([
+                    usdcContract.name(),
+                    usdcContract.symbol(),
+                    usdcContract.decimals()
+                ]);
+                
+                console.log('Token Info:', { name, symbol, decimals });
+                
+                // Get balance
+                const balance = await usdcContract.balanceOf(address);
+                const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+                
+                balanceDiv.textContent = `Balance: ${formattedBalance} ${symbol}`;
+                statusDiv.textContent = `Success! Connected to ${name} contract`;
+                
+                console.log('Balance:', formattedBalance, symbol);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = `Error: ${error.message}`;
+                statusDiv.textContent = 'Failed to get balance';
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('load', testUSDCBalance);
+    </script>
+</body>
+</html>

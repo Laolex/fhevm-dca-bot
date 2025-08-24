@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Link } from 'react-router-dom';
+import { ModernCard, StatsCard, FeatureCard, ActionCard } from './ui/modern-card';
 import {
     Wallet,
     DollarSign,
@@ -89,132 +89,115 @@ const Dashboard: React.FC = () => {
     const activeIntents = intents.filter(intent => intent.status === 'active').length;
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header Section */}
-                <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-800 dark:from-yellow-400 dark:to-yellow-600 bg-clip-text text-transparent flex items-center justify-center gap-2" style={{ background: 'linear-gradient(to right, #d97706, #92400e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        <Shield className="h-8 w-8" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+            <div className="max-w-7xl mx-auto p-6 space-y-8">
+                {/* Hero Section */}
+                <div className="text-center space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-200/50 dark:border-blue-700/50 rounded-full backdrop-blur-sm">
+                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            Dashboard
+                        </span>
+                    </div>
+                    <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
                         FHEVM DCA Dashboard
                     </h1>
-                    <p className="text-lg text-muted-foreground">
+                    <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
                         Secure, automated trading with homomorphic encryption
                     </p>
 
                     {/* Production Mode Banner */}
-                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mt-4">
-                        <p className="text-sm text-green-700 dark:text-green-300">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-4">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
                             ✅ <strong>Live on Sepolia:</strong> FHEVM DCA Bot is live with real smart contracts!
                         </p>
                     </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                                Total Budget
-                            </CardTitle>
-                            <DollarSign className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                                ${totalBudget.toLocaleString()}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                                Active Intents
-                            </CardTitle>
-                            <Zap className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                                {activeIntents}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10" style={{ borderColor: '#fbbf24', backgroundColor: '#fef3c7' }}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300" style={{ color: '#d97706' }}>
-                                Batch Status
-                            </CardTitle>
-                            <Target className="h-4 w-4 text-yellow-600" style={{ color: '#d97706' }} />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600" style={{ color: '#d97706' }}>
-                                Active
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                    <StatsCard
+                        title="Total Budget"
+                        value={`$${totalBudget.toLocaleString()}`}
+                        icon={<DollarSign className="h-6 w-6 text-yellow-600" />}
+                        trend={{ value: 'All Intents', isPositive: true }}
+                        className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-700/50"
+                    />
+                    
+                    <StatsCard
+                        title="Active Intents"
+                        value={activeIntents.toString()}
+                        icon={<Zap className="h-6 w-6 text-emerald-600" />}
+                        trend={{ value: 'Running', isPositive: true }}
+                        className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-200/50 dark:border-emerald-700/50"
+                    />
+                    
+                    <StatsCard
+                        title="Batch Status"
+                        value="Active"
+                        icon={<Target className="h-6 w-6 text-blue-600" />}
+                        trend={{ value: 'Live', isPositive: true }}
+                        className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-200/50 dark:border-blue-700/50"
+                    />
                 </div>
 
                 {/* Main Dashboard Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
                     {/* DCA Progress Chart */}
-                    <Card className="shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BarChart3 className="h-5 w-5" />
-                                DCA Progress
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-64 flex items-center justify-center text-muted-foreground">
+                    <ModernCard variant="glass" className="p-6">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5 text-blue-600" />
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">DCA Progress</h3>
+                            </div>
+                            <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
                                 <div className="text-center">
                                     <div className="text-lg mb-2">No DCA Data</div>
                                     <div className="text-sm">Create your first intent to see progress</div>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </ModernCard>
 
                     {/* Trade Controls */}
-                    <Card className="shadow-lg flex flex-col justify-between">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Clock className="h-5 w-5" />
-                                Next Buy Cycle
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
+                    <ModernCard variant="glass" className="p-6">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-blue-600" />
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Next Buy Cycle</h3>
+                            </div>
+                            
                             <div className="text-center">
-                                <p className="text-sm text-muted-foreground mb-2">Time until next execution</p>
-                                <p className="text-4xl font-mono font-bold text-primary">{countdown}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Time until next execution</p>
+                                <p className="text-4xl font-mono font-bold text-blue-600 dark:text-blue-400">{countdown}</p>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Wallet Status:</span>
+                                    <span className="text-gray-600 dark:text-gray-400">Wallet Status:</span>
                                     <span className="text-red-600">Disconnected</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Network:</span>
+                                    <span className="text-gray-600 dark:text-gray-400">Network:</span>
                                     <span className="text-red-600">Not Connected</span>
                                 </div>
                             </div>
 
-                            <div className="text-center text-sm text-muted-foreground">
+                            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                                 Go to <strong>Submit Intent</strong> page to create your DCA strategy
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </ModernCard>
                 </div>
 
                 {/* DCA Intents Section */}
-                <Card className="border-yellow-200 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/10">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BarChart3 className="h-5 w-5 text-yellow-600" />
-                            Your DCA Intents
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                <ModernCard variant="glass" className="p-6 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Your DCA Intents</h3>
+                        </div>
+                        <div>
                         {loading ? (
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="h-6 w-6 animate-spin text-yellow-600" />
@@ -243,7 +226,7 @@ const Dashboard: React.FC = () => {
                                                 <Shield className="h-4 w-4 text-yellow-600" />
                                                 <span className="font-semibold">DCA Intent #{intent.id.slice(-6)}</span>
                                                 <span className={`px-2 py-1 rounded-full text-xs ${intent.status === 'active'
-                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
                                                         : 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300'
                                                     }`}>
                                                     {intent.status}
@@ -288,8 +271,9 @@ const Dashboard: React.FC = () => {
                                 ))}
                             </div>
                         )}
-                    </CardContent>
-                </Card>
+                        </div>
+                    </div>
+                </ModernCard>
             </div>
         </div>
     );

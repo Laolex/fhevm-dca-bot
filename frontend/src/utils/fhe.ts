@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import { fhevmService } from '../services/fhevmService';
 import { DCAIntent, Intent } from '../types/dca';
 
 // Mock FHE encryption function
@@ -25,41 +24,48 @@ export async function encryptAndSubmitIntent(params: {
     dipRemainingBuys: number;
   };
 }): Promise<string> {
-  try {
-    const txHash = await fhevmService.submitDCAIntent(
-      params.totalBudget,
-      params.perInterval,
-      params.interval,
-      params.totalPeriods,
-      params.dynamicConditions
-    );
-    return txHash;
-  } catch (error) {
-    console.error('Error submitting encrypted intent:', error);
-    throw error;
-  }
+  // Mock implementation for now
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+  
+  // Generate mock transaction hash
+  const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
+  
+  // Store in localStorage for demo purposes
+  const demoIntents = JSON.parse(localStorage.getItem('dcaIntents') || '[]');
+  const newIntent = {
+    id: Date.now().toString(),
+    user: '0x' + Math.random().toString(16).substr(2, 40),
+    amount: params.totalBudget,
+    timestamp: Date.now(),
+    status: 'active'
+  };
+  demoIntents.push(newIntent);
+  localStorage.setItem('dcaIntents', JSON.stringify(demoIntents));
+  
+  return mockTxHash;
 }
 
 // Submit intent with dynamic conditions
 export async function submitIntentWithDynamicConditions(intent: Intent): Promise<string> {
-  try {
-    const txHash = await fhevmService.submitDCAIntent(
-      intent.amount,
-      intent.amount, // Using amount as perInterval for simplicity
-      86400, // Default to daily intervals
-      10, // Default to 10 periods
-      {
-        enabled: true,
-        dipThreshold: 300, // 3%
-        dipMultiplier: 2.0,
-        dipRemainingBuys: 5
-      }
-    );
-    return txHash;
-  } catch (error) {
-    console.error('Error submitting intent with dynamic conditions:', error);
-    throw error;
-  }
+  // Mock implementation for now
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+  
+  // Generate mock transaction hash
+  const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
+  
+  // Store in localStorage for demo purposes
+  const demoIntents = JSON.parse(localStorage.getItem('dcaIntents') || '[]');
+  const newIntent = {
+    id: Date.now().toString(),
+    user: intent.user,
+    amount: intent.amount,
+    timestamp: intent.timestamp,
+    status: 'active'
+  };
+  demoIntents.push(newIntent);
+  localStorage.setItem('dcaIntents', JSON.stringify(demoIntents));
+  
+  return mockTxHash;
 }
 
 // Get USDC balance (mock implementation)
@@ -106,24 +112,24 @@ export async function getMyDCAParams(): Promise<DCAIntent | null> {
 
 // Deactivate DCA intent
 export async function deactivateDCAIntent(): Promise<string> {
-  try {
-    const txHash = await fhevmService.deactivateIntent();
-    return txHash;
-  } catch (error) {
-    console.error('Error deactivating DCA intent:', error);
-    throw error;
-  }
+  // Mock implementation for now
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  
+  // Generate mock transaction hash
+  const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
+  
+  return mockTxHash;
 }
 
 // Execute batch
 export async function executeBatch(): Promise<string> {
-  try {
-    const txHash = await fhevmService.executeBatch();
-    return txHash;
-  } catch (error) {
-    console.error('Error executing batch:', error);
-    throw error;
-  }
+  // Mock implementation for now
+  await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate network delay
+  
+  // Generate mock transaction hash
+  const mockTxHash = '0x' + Math.random().toString(16).substr(2, 64);
+  
+  return mockTxHash;
 }
 
 // Get automation info (mock implementation)

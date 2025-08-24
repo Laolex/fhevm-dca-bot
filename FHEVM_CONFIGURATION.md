@@ -164,5 +164,3 @@ npx hardhat test
 - [isInitialized Utility](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
 
 ---
-
-**Result**: Our FHEVM DCA Bot is properly configured according to Zama's best practices, ensuring maximum security and privacy for users' DCA strategies.

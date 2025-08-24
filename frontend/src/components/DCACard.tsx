@@ -202,11 +202,10 @@ export function DCACard({
                             <button
                                 onClick={handleApprove}
                                 disabled={approvalStatus === 'approving'}
-                                className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-                                    approvalStatus === 'approving'
+                                className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${approvalStatus === 'approving'
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl'
-                                }`}
+                                    }`}
                             >
                                 {approvalStatus === 'approving' ? '⏳ Approving...' : '🔐 Approve USDC to Vault'}
                             </button>
@@ -214,7 +213,7 @@ export function DCACard({
                     )}
 
                     {approvalStatus === 'approved' && (
-                        <div className="text-green-700 text-sm flex items-center gap-2">
+                        <div className="text-emerald-700 text-sm flex items-center gap-2">
                             ✅ USDC approved! Ready to submit DCA intent
                         </div>
                     )}
@@ -241,18 +240,18 @@ export function DCACard({
                     disabled={!canSubmit || approvalStatus !== 'approved'}
                     onClick={onSubmit}
                     className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 ${canSubmit && approvalStatus === 'approved'
-                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                 >
                     {loading ? '⏳ Encrypting & Submitting...' : '🔐 Encrypt & Submit Intent'}
                 </button>
 
                 {txHash && (
-                    <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-green-600 text-lg">✅</span>
+                                <span className="text-emerald-600 text-lg">✅</span>
                             </div>
                             <div>
                                 <p className="text-green-800 font-medium">Transaction submitted successfully!</p>

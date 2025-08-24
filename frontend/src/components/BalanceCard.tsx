@@ -49,7 +49,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({ signer, userAddress }) => {
             <div className="space-y-3">
                 <div className="flex justify-between">
                     <span>USDC Balance:</span>
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-emerald-600">
                         {loading ? '...' : `${balance} USDC`}
                     </span>
                 </div>
@@ -72,7 +72,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({ signer, userAddress }) => {
                                 ⚠️ No vault allowance
                             </div>
                         ) : (
-                            <div className="bg-green-50 text-green-700 p-2 rounded">
+                            <div className="bg-emerald-50 text-emerald-700 p-2 rounded">
                                 ✅ Ready to submit DCA intents!
                             </div>
                         )}

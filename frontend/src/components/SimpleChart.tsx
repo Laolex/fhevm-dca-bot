@@ -41,7 +41,7 @@ const SimpleChart: React.FC<SimpleChartProps> = ({ data }) => {
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-muted rounded-lg">
-          <div className="text-2xl font-bold text-green-600">{totalSpent.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-emerald-600">{totalSpent.toFixed(2)}</div>
           <div className="text-sm text-muted-foreground">Spent (USDC)</div>
         </div>
         <div className="text-center p-3 bg-muted rounded-lg">
@@ -123,7 +123,7 @@ const SimpleChart: React.FC<SimpleChartProps> = ({ data }) => {
           <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
             <span className="text-sm font-medium">{item.name}</span>
             <div className="flex items-center gap-4 text-sm">
-              <span className="text-green-600">{item.spent.toFixed(2)} spent</span>
+              <span className="text-emerald-600">{item.spent.toFixed(2)} spent</span>
               <span className="text-red-600">{item.remaining.toFixed(2)} remaining</span>
               <span className="text-muted-foreground">{item.total.toFixed(2)} total</span>
             </div>

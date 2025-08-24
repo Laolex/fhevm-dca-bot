@@ -60,7 +60,7 @@ const AnimatedStats: React.FC<AnimatedStatsProps> = ({
                 <span className="text-xs opacity-60">{title}</span>
                 <span className="text-xl font-semibold">{displayValue.toLocaleString()}</span>
                 {trend && trendValue && (
-                    <div className={`text-xs ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`text-xs ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
                         {trend === 'up' ? '↗' : '↘'} {trendValue}
                     </div>
                 )}
